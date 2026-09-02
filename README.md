@@ -1,4 +1,3 @@
-<img width="1906" height="952" alt="image" src="https://github.com/user-attachments/assets/e51439f4-bab1-4651-9554-26abae3567a4" /># Ocean3D — Interactive Ocean Digital Twin
 [![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688.svg)](https://fastapi.tiangolo.com)
 [![React](https://img.shields.io/badge/Frontend-React%2019%20%2B%20Vite-61DAFB.svg)](https://react.dev/)
 [![Three.js](https://img.shields.io/badge/3D%20Engine-Three.js-black.svg)](https://threejs.org/)
