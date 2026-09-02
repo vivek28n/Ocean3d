@@ -3,6 +3,8 @@ Ocean3D 🌊
 Ocean3D is an interactive 3D ocean visualization and analysis platform built to explore ocean conditions across different parameters, depths, locations, and time steps.
 
 The project combines a modern React-based 3D interface with a FastAPI backend to visualize ocean model data, compare it with observational data, detect anomalies, and present useful analytical insights.
+
+
 [![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688.svg)](https://fastapi.tiangolo.com)
 [![React](https://img.shields.io/badge/Frontend-React%2019%20%2B%20Vite-61DAFB.svg)](https://react.dev/)
 [![Three.js](https://img.shields.io/badge/3D%20Engine-Three.js-black.svg)](https://threejs.org/)
