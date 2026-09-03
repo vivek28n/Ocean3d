@@ -101,13 +101,13 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
       </div>
 
       {/* 1. REGION SELECTOR */}
-      <section className="bg-slate-900/60 rounded-xl p-3 border border-sky-500/15">
+      <section className="bg-slate-900/60 rounded-xl p-2.5 border border-sky-500/15">
         <div className="flex items-center justify-between mb-2">
-          <span className="font-semibold text-cyan-300 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+          <span className="font-semibold text-cyan-300 uppercase tracking-wider text-[10.5px] flex items-center gap-1.5">
             <MapPin className="w-3.5 h-3.5" /> Ocean Basin / Region
           </span>
         </div>
-        <div className="grid grid-cols-1 gap-1.5">
+        <div className="grid grid-cols-1 gap-1">
           {regions.map((reg) => {
             const isSelected = currentRegion.id === reg.id;
             const isBoB = reg.id === 'bay_of_bengal';
@@ -115,17 +115,17 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
               <button
                 key={reg.id}
                 onClick={() => onSelectRegion(reg)}
-                className={`w-full px-2.5 py-2 rounded-lg text-left transition-all flex items-center justify-between border ${
+                className={`w-full px-2.5 py-1.5 rounded-lg text-left transition-all flex items-center justify-between border cursor-pointer ${
                   isSelected
-                    ? 'bg-sky-500/25 border-sky-400 text-white font-medium shadow-md shadow-sky-500/20'
-                    : 'bg-slate-800/40 border-slate-700/50 text-slate-300 hover:bg-slate-800/80 hover:border-sky-500/30'
+                    ? 'bg-sky-500/20 border-sky-400/80 text-white font-medium shadow-sm shadow-sky-950/40'
+                    : 'bg-slate-800/30 border-slate-700/50 text-slate-300 hover:bg-slate-800/70 hover:border-sky-500/30'
                 }`}
               >
-                <div className="truncate">
-                  <div className="truncate font-medium">{reg.name}</div>
+                <div className="truncate pr-1">
+                  <div className="truncate font-medium text-xs">{reg.name}</div>
                 </div>
                 {isBoB && (
-                  <span className="text-[9px] uppercase px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold tracking-wider">
+                  <span className="text-[8.5px] uppercase px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 font-semibold tracking-wider shrink-0">
                     SIH Priority
                   </span>
                 )}
@@ -136,28 +136,28 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
       </section>
 
       {/* 2. PARAMETER SELECTOR */}
-      <section className="bg-slate-900/60 rounded-xl p-3 border border-sky-500/15">
-        <span className="font-semibold text-cyan-300 uppercase tracking-wider text-[11px] block mb-2">
+      <section className="bg-slate-900/60 rounded-xl p-2.5 border border-sky-500/15">
+        <span className="font-semibold text-cyan-300 uppercase tracking-wider text-[10.5px] block mb-2">
           Physical Parameter
         </span>
-        <div className="grid grid-cols-1 gap-1.5">
+        <div className="grid grid-cols-1 gap-1">
           {parameters.map((param) => {
             const isSelected = currentParameter.id === param.id;
             return (
               <button
                 key={param.id}
                 onClick={() => onSelectParameter(param)}
-                className={`w-full px-2.5 py-2 rounded-lg text-left transition-all flex items-center justify-between border ${
+                className={`w-full px-2.5 py-1.5 rounded-lg text-left transition-all flex items-center justify-between border cursor-pointer ${
                   isSelected
-                    ? 'bg-sky-500/25 border-sky-400 text-white font-medium shadow-md shadow-sky-500/20'
-                    : 'bg-slate-800/40 border-slate-700/50 text-slate-300 hover:bg-slate-800/80 hover:border-sky-500/30'
+                    ? 'bg-sky-500/20 border-sky-400/80 text-white font-medium shadow-sm shadow-sky-950/40'
+                    : 'bg-slate-800/30 border-slate-700/50 text-slate-300 hover:bg-slate-800/70 hover:border-sky-500/30'
                 }`}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 min-w-0 pr-1">
                   {getParamIcon(param.id)}
-                  <span>{param.name}</span>
+                  <span className="truncate text-xs">{param.name}</span>
                 </div>
-                <span className="font-mono text-[11px] px-1.5 py-0.5 rounded bg-slate-950/60 text-slate-300 border border-slate-700">
+                <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-slate-950/60 text-slate-300 border border-slate-700 shrink-0">
                   {param.unit}
                 </span>
               </button>
@@ -167,19 +167,19 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
       </section>
 
       {/* 3. DEPTH SELECTOR */}
-      <section className="bg-slate-900/60 rounded-xl p-3 border border-sky-500/15">
-        <div className="flex items-center justify-between mb-2">
-          <span className="font-semibold text-cyan-300 uppercase tracking-wider text-[11px]">
+      <section className="bg-slate-900/60 rounded-xl p-2.5 border border-sky-500/15">
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="font-semibold text-cyan-300 uppercase tracking-wider text-[10.5px]">
             Depth Stratification
           </span>
-          <span className="font-mono text-cyan-400 font-bold">{currentDepth}m Level</span>
+          <span className="font-mono text-cyan-300 text-xs font-semibold">{currentDepth}m Level</span>
         </div>
         
         {/* SSH Surface Locking Notice */}
         {currentParameter.id === 'ssh' && (
-          <div className="mb-2 p-1.5 rounded bg-sky-950/60 border border-sky-500/30 text-[10px] text-cyan-200 flex items-center gap-1.5">
+          <div className="mb-2 p-1.5 rounded bg-sky-950/40 border border-sky-500/25 text-[9.5px] text-cyan-200 flex items-center gap-1.5">
             <Lock className="w-3 h-3 text-cyan-400 shrink-0" />
-            <span>SSH is a 2D surface variable — surface level only.</span>
+            <span>SSH is constrained to 0m (sea surface variable).</span>
           </div>
         )}
 
@@ -193,12 +193,12 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                 onClick={() => !isLocked && onSelectDepth(d)}
                 disabled={isLocked}
                 title={isLocked ? "SSH only exists at 0m surface level" : `Set depth to ${d}m`}
-                className={`py-1.5 rounded text-center font-mono font-medium transition-all border ${
+                className={`py-1.5 rounded text-center font-mono text-xs transition-all border ${
                   isSelected
-                    ? 'bg-cyan-500 text-slate-950 border-cyan-400 font-bold shadow-sm shadow-cyan-500/30'
+                    ? 'bg-sky-500/30 text-cyan-200 border-sky-400 font-bold shadow-sm shadow-sky-950/40'
                     : isLocked
-                    ? 'bg-slate-950/40 border-slate-800 text-slate-600 cursor-not-allowed opacity-40'
-                    : 'bg-slate-800/40 border-slate-700/60 text-slate-300 hover:bg-slate-800 hover:border-sky-500/40'
+                    ? 'bg-slate-950/30 border-slate-800/80 text-slate-600 cursor-not-allowed opacity-40'
+                    : 'bg-slate-800/30 border-slate-700/50 text-slate-300 hover:bg-slate-800 hover:border-sky-500/40 cursor-pointer'
                 }`}
               >
                 {d}m
@@ -209,46 +209,46 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
       </section>
 
       {/* 4. TIME CONTROLS */}
-      <section className="bg-slate-900/60 rounded-xl p-3 border border-sky-500/15">
-        <div className="flex items-center justify-between mb-2">
-          <span className="font-semibold text-cyan-300 uppercase tracking-wider text-[11px]">
+      <section className="bg-slate-900/60 rounded-xl p-2.5 border border-sky-500/15">
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="font-semibold text-cyan-300 uppercase tracking-wider text-[10.5px]">
             Timeline Navigation
           </span>
-          <span className="text-[10px] text-slate-400 font-mono">6h Delta</span>
+          <span className="text-[9.5px] text-slate-400 font-mono">6h Interval</span>
         </div>
 
         {/* Current Timestamp Display */}
-        <div className="p-2 rounded-lg bg-slate-950/80 border border-sky-500/20 text-center mb-3">
-          <div className="text-cyan-300 font-mono text-xs font-semibold">{formattedDate}</div>
-          <div className="text-[10px] text-slate-400">Step {currentTimeIndex + 1} of {timesteps.length}</div>
+        <div className="p-2 rounded-lg bg-slate-950/70 border border-sky-500/20 text-center mb-2.5">
+          <div className="text-cyan-300 font-mono text-xs font-medium">{formattedDate}</div>
+          <div className="text-[9.5px] text-slate-400 font-mono mt-0.5">Step {currentTimeIndex + 1} of {timesteps.length}</div>
         </div>
 
         {/* Playback Buttons */}
-        <div className="flex items-center justify-center gap-2 mb-3">
+        <div className="flex items-center justify-center gap-2 mb-2.5">
           <button
             onClick={() => onSelectTimeIndex(Math.max(0, currentTimeIndex - 1))}
             disabled={currentTimeIndex === 0}
-            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 border border-slate-700 transition-all"
+            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-slate-200 border border-slate-700 transition-all cursor-pointer disabled:cursor-not-allowed"
             title="Previous 6h Step"
           >
-            <ChevronLeft className="w-4 h-4" />
+            <ChevronLeft className="w-3.5 h-3.5" />
           </button>
 
           <button
             onClick={onTogglePlay}
-            className={`px-4 py-1.5 rounded-lg flex items-center gap-1.5 font-medium transition-all ${
+            className={`px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 font-medium text-xs transition-all cursor-pointer ${
               isPlaying
-                ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold shadow-md shadow-amber-500/20'
-                : 'bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold shadow-md shadow-cyan-500/20'
+                ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-400/40 font-semibold'
+                : 'bg-sky-500/20 hover:bg-sky-500/30 text-cyan-200 border border-sky-400/40 font-semibold'
             }`}
           >
             {isPlaying ? (
               <>
-                <Pause className="w-3.5 h-3.5" /> Pause
+                <Pause className="w-3 h-3 text-amber-400" /> Pause
               </>
             ) : (
               <>
-                <Play className="w-3.5 h-3.5" /> Play Loop
+                <Play className="w-3 h-3 text-cyan-400" /> Play Loop
               </>
             )}
           </button>
@@ -256,10 +256,10 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
           <button
             onClick={() => onSelectTimeIndex(Math.min(timesteps.length - 1, currentTimeIndex + 1))}
             disabled={currentTimeIndex === timesteps.length - 1}
-            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 border border-slate-700 transition-all"
+            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-slate-200 border border-slate-700 transition-all cursor-pointer disabled:cursor-not-allowed"
             title="Next 6h Step"
           >
-            <ChevronRight className="w-4 h-4" />
+            <ChevronRight className="w-3.5 h-3.5" />
           </button>
         </div>
 

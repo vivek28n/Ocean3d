@@ -82,6 +82,7 @@ export const Ocean3DViewer: React.FC<Ocean3DViewerProps> = ({
 
   const [hoveredStation, setHoveredStation] = useState<string | null>(null);
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
+  const [isLegendCollapsed, setIsLegendCollapsed] = useState<boolean>(false);
 
   // Coordinate projection helper: converts lat, lon into 3D scene coordinates (centered around current region)
   const projectGeoTo3D = (lat: number, lon: number, alt: number = 0) => {
@@ -821,77 +822,94 @@ export const Ocean3DViewer: React.FC<Ocean3DViewerProps> = ({
       </div>
 
       {/* Scientific Parameter & Difference Legend Bar (Bottom Left of 3D Canvas) */}
-      <div className="absolute bottom-4 left-4 z-20 glass-panel px-4 py-3 rounded-xl border border-sky-500/20 w-84">
-        {layers.difference ? (
-          <div>
-            <div className="flex items-center justify-between text-xs font-medium text-slate-300 mb-1.5">
-              <span className="text-amber-300 font-semibold">Difference: Observed − Model</span>
-              <span className="font-mono text-slate-400">Unit: {currentParameter.unit}</span>
-            </div>
+      <div className="absolute bottom-4 left-4 z-20 glass-panel p-2.5 rounded-xl border border-sky-500/20 max-w-xs transition-all select-none">
+        <div className="flex items-center justify-between gap-3 mb-1">
+          <span className="text-[11px] font-semibold text-cyan-300">
+            {layers.difference ? 'Difference Scale' : currentParameter.name}
+          </span>
+          <button
+            onClick={() => setIsLegendCollapsed(prev => !prev)}
+            className="text-[9.5px] font-mono px-1.5 py-0.2 rounded bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-700/60 transition-colors"
+            title={isLegendCollapsed ? "Expand Legend" : "Collapse Legend"}
+          >
+            {isLegendCollapsed ? 'Expand' : 'Hide'}
+          </button>
+        </div>
 
-            {/* Diverging Residual Gradient Bar: Negative (Cool Blue) -> Neutral (White) -> Positive (Warm Red) */}
-            <div
-              className="h-2.5 w-full rounded-full border border-sky-500/30"
-              style={{
-                background: 'linear-gradient(to right, #0284c7, #e0f2fe, #ef4444)'
-              }}
-            />
+        {!isLegendCollapsed && (
+          <div className="mt-1.5">
+            {layers.difference ? (
+              <div>
+                <div className="flex items-center justify-between text-[10px] text-slate-300 mb-1">
+                  <span className="text-amber-300 font-medium">Observed − Model</span>
+                  <span className="font-mono text-slate-400">{currentParameter.unit}</span>
+                </div>
 
-            <div className="flex justify-between text-[11px] font-mono text-slate-300 mt-1">
-              <span className="text-sky-400">
-                -{currentParameter.id === 'sst' ? '2.5' : currentParameter.id === 'salinity' ? '2.0' : currentParameter.id === 'ssh' ? '0.3' : '0.8'} {currentParameter.unit}
-              </span>
-              <span className="text-slate-300 font-bold">0.0 (Neutral)</span>
-              <span className="text-rose-400">
-                +{currentParameter.id === 'sst' ? '2.5' : currentParameter.id === 'salinity' ? '2.0' : currentParameter.id === 'ssh' ? '0.3' : '0.8'} {currentParameter.unit}
-              </span>
-            </div>
+                {/* Diverging Residual Gradient Bar */}
+                <div
+                  className="h-2 w-full rounded-full border border-sky-500/30"
+                  style={{
+                    background: 'linear-gradient(to right, #0284c7, #e0f2fe, #ef4444)'
+                  }}
+                />
 
-            <div className="text-[10px] text-slate-400 mt-2 pt-1.5 border-t border-sky-500/15 flex items-center justify-between">
-              <span>Cool: Negative Residual</span>
-              <span>Warm: Positive Anomaly</span>
-            </div>
-          </div>
-        ) : (
-          <div>
-            <div className="flex items-center justify-between text-xs font-medium text-slate-300 mb-1.5">
-              <span className="text-cyan-300 font-semibold">{currentParameter.name}</span>
-              <span className="font-mono text-slate-400">Unit: {currentParameter.unit}</span>
-            </div>
+                <div className="flex justify-between text-[10px] font-mono text-slate-300 mt-1">
+                  <span className="text-sky-400">
+                    -{currentParameter.id === 'sst' ? '2.5' : currentParameter.id === 'salinity' ? '2.0' : currentParameter.id === 'ssh' ? '0.3' : '0.8'}
+                  </span>
+                  <span className="text-slate-300 font-bold">0.0</span>
+                  <span className="text-rose-400">
+                    +{currentParameter.id === 'sst' ? '2.5' : currentParameter.id === 'salinity' ? '2.0' : currentParameter.id === 'ssh' ? '0.3' : '0.8'}
+                  </span>
+                </div>
 
-            {/* Dynamic Gradient Bar */}
-            <div
-              className="h-2.5 w-full rounded-full border border-sky-500/30"
-              style={{
-                background:
-                  currentParameter.id === 'sst'
-                    ? 'linear-gradient(to right, #0f2b5c, #0088cc, #00ffcc, #ffcc00, #ee2222)'
-                    : currentParameter.id === 'salinity'
-                    ? 'linear-gradient(to right, #1a237e, #00897b, #7cb342, #fdd835)'
-                    : currentParameter.id === 'ssh'
-                    ? 'linear-gradient(to right, #1565c0, #80deea, #ffffff, #ff9800, #e53935)'
-                    : 'linear-gradient(to right, #2a0845, #8e24aa, #f4511e, #ffeb3b)'
-              }}
-            />
+                <div className="text-[9.5px] text-slate-400 mt-1.5 pt-1 border-t border-sky-500/15 flex items-center justify-between">
+                  <span className="text-sky-400">Cool: Underprediction</span>
+                  <span className="text-rose-400">Warm: Overprediction</span>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div className="flex items-center justify-between text-[10px] text-slate-300 mb-1">
+                  <span className="text-slate-300 font-medium">{currentParameter.name}</span>
+                  <span className="font-mono text-slate-400">{currentParameter.unit}</span>
+                </div>
 
-            <div className="flex justify-between text-[11px] font-mono text-slate-400 mt-1">
-              <span>{currentParameter.min_val} {currentParameter.unit}</span>
-              <span>{((currentParameter.min_val + currentParameter.max_val) / 2).toFixed(1)}</span>
-              <span>{currentParameter.max_val} {currentParameter.unit}</span>
-            </div>
+                {/* Dynamic Gradient Bar */}
+                <div
+                  className="h-2 w-full rounded-full border border-sky-500/30"
+                  style={{
+                    background:
+                      currentParameter.id === 'sst'
+                        ? 'linear-gradient(to right, #0f2b5c, #0088cc, #00ffcc, #ffcc00, #ee2222)'
+                        : currentParameter.id === 'salinity'
+                        ? 'linear-gradient(to right, #1a237e, #00897b, #7cb342, #fdd835)'
+                        : currentParameter.id === 'ssh'
+                        ? 'linear-gradient(to right, #1565c0, #80deea, #ffffff, #ff9800, #e53935)'
+                        : 'linear-gradient(to right, #2a0845, #8e24aa, #f4511e, #ffeb3b)'
+                  }}
+                />
 
-            {/* Legend Key */}
-            <div className="flex items-center justify-between text-[10px] text-slate-400 mt-2.5 pt-2 border-t border-sky-500/15">
-              <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" /> Normal (|Z| &lt; 1.5)
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" /> Moderate (1.5-2.5)
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-red-500 inline-block animate-ping" /> Anomaly (≥2.5)
-              </span>
-            </div>
+                <div className="flex justify-between text-[10px] font-mono text-slate-400 mt-1">
+                  <span>{currentParameter.min_val}</span>
+                  <span>{((currentParameter.min_val + currentParameter.max_val) / 2).toFixed(1)}</span>
+                  <span>{currentParameter.max_val}</span>
+                </div>
+
+                {/* Legend Key */}
+                <div className="flex items-center justify-between text-[9px] text-slate-400 mt-1.5 pt-1 border-t border-sky-500/15">
+                  <span className="flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" /> |Z|&lt;1.5
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" /> 1.5-2.5
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block" /> ≥2.5
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
