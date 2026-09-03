@@ -157,16 +157,22 @@ export const Ocean3DViewer: React.FC<Ocean3DViewerProps> = ({
     scene.add(gridLines);
     gridLinesGroupRef.current = gridLines;
 
-    // Window Resize handling
+    // Container Resize handling (Window & Side Panel Collapse/Expand)
     const handleResize = () => {
       if (!container || !renderer || !camera) return;
       const w = container.clientWidth;
       const h = container.clientHeight;
+      if (w === 0 || h === 0) return;
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
     };
     window.addEventListener('resize', handleResize);
+
+    const resizeObserver = new ResizeObserver(() => {
+      handleResize();
+    });
+    resizeObserver.observe(container);
 
     // Animation Loop
     let animationFrameId: number;
@@ -222,6 +228,7 @@ export const Ocean3DViewer: React.FC<Ocean3DViewerProps> = ({
     return () => {
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener('resize', handleResize);
+      resizeObserver.disconnect();
       renderer.dispose();
       if (container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement);

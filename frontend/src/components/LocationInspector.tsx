@@ -12,6 +12,8 @@ interface LocationInspectorProps {
   currentDepth: number;
   allObservations: ObservationPoint[];
   onSelectStation: (obs: ObservationPoint) => void;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 export const LocationInspector: React.FC<LocationInspectorProps> = ({
@@ -21,14 +23,51 @@ export const LocationInspector: React.FC<LocationInspectorProps> = ({
   currentDepth,
   allObservations,
   onSelectStation,
+  isCollapsed = false,
+  onToggleCollapse
 }) => {
+  if (isCollapsed) {
+    return (
+      <aside className="w-11 h-full flex flex-col items-center py-3 glass-panel border-l border-sky-500/20 text-slate-200 z-20 shrink-0 select-none">
+        <button
+          onClick={onToggleCollapse}
+          className="p-2 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-cyan-300 hover:text-white border border-sky-500/20 transition-all cursor-pointer"
+          title="Expand Location Inspector"
+          aria-label="Expand Location Inspector"
+        >
+          <Compass className="w-4 h-4" />
+        </button>
+        <div className="mt-8 flex flex-col items-center gap-4 text-[10px] font-mono tracking-widest text-slate-400 [writing-mode:vertical-lr]">
+          <span className="text-cyan-400 font-semibold uppercase">Inspector</span>
+          {selectedObservation && (
+            <span className="text-slate-300 truncate max-h-24">{selectedObservation.id}</span>
+          )}
+          <span className="text-slate-500">{allObservations.length} Obs</span>
+        </div>
+      </aside>
+    );
+  }
+
   return (
-    <aside className="w-80 h-full flex flex-col gap-3 p-3 overflow-y-auto glass-panel border-l border-sky-500/20 text-slate-200 text-xs">
+    <aside className="w-80 h-full flex flex-col gap-3 p-3 overflow-y-auto glass-panel border-l border-sky-500/20 text-slate-200 text-xs shrink-0 select-none transition-all">
       {/* Panel Header */}
       <div className="flex items-center justify-between pb-2 border-b border-sky-500/20">
-        <span className="font-semibold text-cyan-300 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
-          <Compass className="w-4 h-4 text-cyan-400" /> Location Inspector
-        </span>
+        <div className="flex items-center gap-1.5">
+          {onToggleCollapse && (
+            <button
+              onClick={onToggleCollapse}
+              className="p-1 rounded-md bg-slate-800/60 hover:bg-slate-700/80 text-slate-400 hover:text-white border border-slate-700/50 transition-colors"
+              title="Collapse Location Inspector"
+              aria-label="Collapse Location Inspector"
+            >
+              <X className="w-3.5 h-3.5 hidden" />
+              <span className="text-slate-400 text-xs font-mono">▶</span>
+            </button>
+          )}
+          <span className="font-semibold text-cyan-300 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+            <Compass className="w-4 h-4 text-cyan-400" /> Location Inspector
+          </span>
+        </div>
         {selectedObservation && (
           <button
             onClick={onClearSelection}

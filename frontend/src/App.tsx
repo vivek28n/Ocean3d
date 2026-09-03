@@ -50,6 +50,10 @@ export const App: React.FC = () => {
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
+  // Side panel collapse states (default open to preserve original UX)
+  const [isLeftPanelCollapsed, setIsLeftPanelCollapsed] = useState<boolean>(false);
+  const [isRightPanelCollapsed, setIsRightPanelCollapsed] = useState<boolean>(false);
+
   // 1. Initial configuration load
   useEffect(() => {
     async function initApp() {
@@ -259,23 +263,26 @@ export const App: React.FC = () => {
           onSelectRegion={setCurrentRegion}
           layers={layers}
           onToggleLayer={handleToggleLayer}
+          isCollapsed={isLeftPanelCollapsed}
+          onToggleCollapse={() => setIsLeftPanelCollapsed(prev => !prev)}
         />
 
         {/* CENTER 3D OCEAN VIEWPORT */}
-        <main className="flex-1 relative h-full overflow-hidden flex flex-col">
-          {/* Prominent Risk & Decision Support Banner across top of 3D center */}
-          <div className="p-3 z-20">
+        <main className="flex-1 relative h-full overflow-hidden">
+          {/* Floating Risk & Decision Support HUD anchored to upper portion of 3D canvas */}
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 w-[94%] max-w-2xl pointer-events-auto">
             <RiskDecisionSupport
               anomalies={anomalies}
               currentParameter={currentParameter}
               currentRegion={currentRegion}
               currentDepth={currentDepth}
+              selectedObservation={selectedObservation}
               onSelectAnomalyStation={handleSelectAnomalyStation}
             />
           </div>
 
-          {/* Core Interactive 3D Ocean Scene */}
-          <div className="flex-1 relative w-full h-full">
+          {/* Core Interactive 3D Ocean Scene (occupies full height and width) */}
+          <div className="relative w-full h-full">
             <Ocean3DViewer
               gridData={gridData}
               observations={observations}
@@ -297,6 +304,8 @@ export const App: React.FC = () => {
           currentDepth={currentDepth}
           allObservations={observations}
           onSelectStation={handleSelectObservation}
+          isCollapsed={isRightPanelCollapsed}
+          onToggleCollapse={() => setIsRightPanelCollapsed(prev => !prev)}
         />
 
       </div>

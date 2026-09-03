@@ -1,11 +1,17 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
 :root {
   --bg-space: #030712;
   --bg-ocean-deep: #050e1d;
-  --panel-bg: rgba(7, 19, 39, 0.75);
-  --panel-border: rgba(56, 189, 248, 0.2);
-  --glow-cyan: rgba(6, 182, 212, 0.4);
+  --panel-bg: rgba(6, 17, 33, 0.82);
+  --panel-border: rgba(56, 189, 248, 0.18);
+  --panel-border-hover: rgba(56, 189, 248, 0.35);
+  --accent-cyan: #38bdf8;
 }
 
 * {
@@ -20,50 +26,45 @@ html, body, #root {
   overflow: hidden;
   background-color: var(--bg-space);
   color: #f1f5f9;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Glassmorphism utility classes */
+/* Scientific Glassmorphism utility classes */
 .glass-panel {
-  background: rgba(10, 25, 47, 0.78);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(56, 189, 248, 0.22);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.45);
+  background: rgba(8, 20, 38, 0.82);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(56, 189, 248, 0.18);
+  box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.45);
 }
 
 .glass-panel-subtle {
-  background: rgba(15, 33, 64, 0.6);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(56, 189, 248, 0.15);
+  background: rgba(12, 27, 51, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(56, 189, 248, 0.12);
 }
 
-/* Custom glowing borders */
-.glow-cyan-border {
-  box-shadow: 0 0 15px rgba(6, 182, 212, 0.35);
-}
-
-.glow-alert-border {
-  box-shadow: 0 0 20px rgba(239, 68, 68, 0.45);
+.font-mono {
+  font-family: var(--font-mono);
 }
 
 /* Custom sleek scrollbar for panels */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: rgba(3, 10, 24, 0.6);
+  background: rgba(3, 10, 24, 0.4);
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(56, 189, 248, 0.35);
+  background: rgba(56, 189, 248, 0.25);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(56, 189, 248, 0.6);
+  background: rgba(56, 189, 248, 0.45);
 }
 
 /* Pulse animation for high risk beacon */

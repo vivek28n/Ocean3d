@@ -22,6 +22,8 @@ interface ControlPanelProps {
   onSelectRegion: (reg: RegionInfo) => void;
   layers: ActiveLayers;
   onToggleLayer: (layerKey: keyof ActiveLayers) => void;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 export const ControlPanel: React.FC<ControlPanelProps> = ({
@@ -40,7 +42,9 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
   currentRegion,
   onSelectRegion,
   layers,
-  onToggleLayer
+  onToggleLayer,
+  isCollapsed = false,
+  onToggleCollapse
 }) => {
   const getParamIcon = (id: string) => {
     switch (id) {
@@ -57,9 +61,45 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
     month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'UTC'
   }) + ' UTC' : 'Loading...';
 
+  if (isCollapsed) {
+    return (
+      <aside className="w-11 h-full flex flex-col items-center py-3 glass-panel border-r border-sky-500/20 text-slate-200 z-20 shrink-0 select-none">
+        <button
+          onClick={onToggleCollapse}
+          className="p-2 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-cyan-300 hover:text-white border border-sky-500/20 transition-all cursor-pointer"
+          title="Expand Control Panel"
+          aria-label="Expand Control Panel"
+        >
+          <ChevronRight className="w-4 h-4" />
+        </button>
+        <div className="mt-8 flex flex-col items-center gap-4 text-[10px] font-mono tracking-widest text-slate-400 [writing-mode:vertical-lr] rotate-180">
+          <span className="text-cyan-400 font-semibold uppercase">Controls</span>
+          <span>{currentParameter.unit}</span>
+          <span className="text-slate-500">{currentDepth}m</span>
+        </div>
+      </aside>
+    );
+  }
+
   return (
-    <aside className="w-80 h-full flex flex-col gap-3 p-3 overflow-y-auto glass-panel border-r border-sky-500/20 text-slate-200 text-xs">
-      
+    <aside className="w-80 h-full flex flex-col gap-3 p-3 overflow-y-auto glass-panel border-r border-sky-500/20 text-slate-200 text-xs shrink-0 select-none transition-all">
+      {/* Panel Top Header with Collapse Button */}
+      <div className="flex items-center justify-between pb-2 border-b border-sky-500/20">
+        <span className="font-semibold text-cyan-300 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+          <Layers className="w-3.5 h-3.5 text-cyan-400" /> Digital Twin Controls
+        </span>
+        {onToggleCollapse && (
+          <button
+            onClick={onToggleCollapse}
+            className="p-1 rounded-md bg-slate-800/60 hover:bg-slate-700/80 text-slate-400 hover:text-white border border-slate-700/50 transition-colors"
+            title="Collapse Control Panel"
+            aria-label="Collapse Control Panel"
+          >
+            <ChevronLeft className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+
       {/* 1. REGION SELECTOR */}
       <section className="bg-slate-900/60 rounded-xl p-3 border border-sky-500/15">
         <div className="flex items-center justify-between mb-2">
