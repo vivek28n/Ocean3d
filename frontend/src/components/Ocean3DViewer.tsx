@@ -79,6 +79,7 @@ export const Ocean3DViewer: React.FC<Ocean3DViewerProps> = ({
   const gridLinesGroupRef = useRef<THREE.Group | null>(null);
   const raycasterRef = useRef<THREE.Raycaster>(new THREE.Raycaster());
   const mouseRef = useRef<THREE.Vector2>(new THREE.Vector2());
+  const pointerDownPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
   const [hoveredStation, setHoveredStation] = useState<string | null>(null);
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
@@ -108,7 +109,9 @@ export const Ocean3DViewer: React.FC<Ocean3DViewerProps> = ({
 
     // Camera
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
-    camera.position.set(0, 18, 16);
+    const baseZoom = 4.5;
+    const zoomRatio = baseZoom / (currentRegion.default_zoom || 4.5);
+    camera.position.set(0, 18 * zoomRatio, 16 * zoomRatio);
     cameraRef.current = camera;
 
     // Renderer
@@ -125,7 +128,7 @@ export const Ocean3DViewer: React.FC<Ocean3DViewerProps> = ({
     controls.dampingFactor = 0.06;
     controls.maxPolarAngle = Math.PI / 2.05; // don't go below sea level plane
     controls.minDistance = 3;
-    controls.maxDistance = 50;
+    controls.maxDistance = 80;
     controls.target.set(0, 0, 0);
     controlsRef.current = controls;
 
@@ -236,6 +239,16 @@ export const Ocean3DViewer: React.FC<Ocean3DViewerProps> = ({
       }
     };
   }, []);
+
+  // 1b. Region-specific camera framing: adjust camera distance based on default_zoom
+  useEffect(() => {
+    if (!cameraRef.current || !controlsRef.current) return;
+    const baseZoom = 4.5;
+    const zoomRatio = baseZoom / (currentRegion.default_zoom || 4.5);
+    cameraRef.current.position.set(0, 18 * zoomRatio, 16 * zoomRatio);
+    controlsRef.current.target.set(0, 0, 0);
+    controlsRef.current.update();
+  }, [currentRegion.id, currentRegion.default_zoom]);
 
   // 2. Build Geographic Features & Coastlines
   useEffect(() => {
@@ -523,7 +536,11 @@ export const Ocean3DViewer: React.FC<Ocean3DViewerProps> = ({
     oceanPointsRef.current = oceanPoints;
 
     // Base glowing bathymetric plane beneath
-    const planeGeo = new THREE.PlaneGeometry(28, 22, 40, 40);
+    const baseZoom = 4.5;
+    const zoomRatio = baseZoom / (currentRegion.default_zoom || 4.5);
+    const planeW = 28 * Math.max(1, zoomRatio * 0.9);
+    const planeH = 22 * Math.max(1, zoomRatio * 0.9);
+    const planeGeo = new THREE.PlaneGeometry(planeW, planeH, 40, 40);
     planeGeo.rotateX(-Math.PI / 2);
     const planeMat = new THREE.MeshStandardMaterial({
       color: 0x041935,
@@ -602,7 +619,8 @@ export const Ocean3DViewer: React.FC<Ocean3DViewerProps> = ({
       buoyContainer.add(beaconMesh);
 
       // Pulsing Radar Ping Ring for Anomalies or Selected Station
-      if (layers.anomaly || obs.anomaly_severity !== 'NORMAL' || isSelected) {
+      const showRing = isSelected || (layers.anomaly && obs.anomaly_severity !== 'NORMAL');
+      if (showRing) {
         const ringGeo = new THREE.RingGeometry(0.3, 0.4, 24);
         ringGeo.rotateX(-Math.PI / 2);
         const ringMat = new THREE.MeshBasicMaterial({
@@ -650,12 +668,14 @@ export const Ocean3DViewer: React.FC<Ocean3DViewerProps> = ({
     group.visible = layers.currentVectors;
     if (!layers.currentVectors) return;
 
+    const depthY = -currentDepth * 0.0035;
+
     // Subsample grid points to display streamlined dynamic velocity vectors
     const stride = currentRegion.id === 'bay_of_bengal' ? 2 : 3;
     gridData.forEach((pt, i) => {
       if (i % stride !== 0) return;
 
-      const pos = projectGeoTo3D(pt.lat, pt.lon, 0.15);
+      const pos = projectGeoTo3D(pt.lat, pt.lon, depthY + 0.15);
       const mag = Math.min(1.5, Math.max(0.2, pt.current_magnitude));
 
       // Arrow direction vector
@@ -684,13 +704,22 @@ export const Ocean3DViewer: React.FC<Ocean3DViewerProps> = ({
       group.add(arrow);
     });
 
-  }, [gridData, layers.currentVectors, currentRegion]);
+  }, [gridData, layers.currentVectors, currentRegion, currentDepth]);
 
   // 6. Raycasting for Observation Click & Hover Interaction
   const handlePointerDown = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (!mountRef.current || !cameraRef.current || !buoysGroupRef.current) return;
-    const rect = mountRef.current.getBoundingClientRect();
+    pointerDownPosRef.current = { x: event.clientX, y: event.clientY };
+  };
 
+  const handlePointerUp = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!mountRef.current || !cameraRef.current || !buoysGroupRef.current) return;
+    const dx = event.clientX - pointerDownPosRef.current.x;
+    const dy = event.clientY - pointerDownPosRef.current.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    // Ignore drag gestures (> 5px) to prevent accidental selection during camera rotation/pan
+    if (dist > 5) return;
+
+    const rect = mountRef.current.getBoundingClientRect();
     mouseRef.current.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     mouseRef.current.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
@@ -734,17 +763,21 @@ export const Ocean3DViewer: React.FC<Ocean3DViewerProps> = ({
     setTooltipPos(null);
   };
 
-  // Camera preset handlers
+  // Camera preset handlers respecting region zoom scale
   const handleResetCamera = () => {
     if (!controlsRef.current || !cameraRef.current) return;
-    cameraRef.current.position.set(0, 18, 16);
+    const baseZoom = 4.5;
+    const zoomRatio = baseZoom / (currentRegion.default_zoom || 4.5);
+    cameraRef.current.position.set(0, 18 * zoomRatio, 16 * zoomRatio);
     controlsRef.current.target.set(0, 0, 0);
     controlsRef.current.update();
   };
 
   const handleTopDownView = () => {
     if (!controlsRef.current || !cameraRef.current) return;
-    cameraRef.current.position.set(0, 26, 0.01);
+    const baseZoom = 4.5;
+    const zoomRatio = baseZoom / (currentRegion.default_zoom || 4.5);
+    cameraRef.current.position.set(0, 26 * zoomRatio, 0.01);
     controlsRef.current.target.set(0, 0, 0);
     controlsRef.current.update();
   };
@@ -763,6 +796,7 @@ export const Ocean3DViewer: React.FC<Ocean3DViewerProps> = ({
         className="w-full h-full cursor-grab active:cursor-grabbing"
         onMouseDown={handlePointerDown}
         onMouseMove={handlePointerMove}
+        onMouseUp={handlePointerUp}
       />
 
       {/* Floating Hover Tooltip */}

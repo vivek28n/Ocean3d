@@ -54,6 +54,21 @@ const CustomTelemetryTooltip = ({ active, payload, label, unit }: any) => {
   );
 };
 
+// Formats unique readable label per timestep to eliminate Recharts category collisions across days
+const formatUniqueTimestepLabel = (timeStr?: string, fallbackLabel?: string) => {
+  if (!timeStr) return fallbackLabel || '';
+  try {
+    const d = new Date(timeStr);
+    const month = d.toLocaleString('en-US', { month: 'short', timeZone: 'UTC' });
+    const day = d.getUTCDate();
+    const hours = String(d.getUTCHours()).padStart(2, '0');
+    const mins = String(d.getUTCMinutes()).padStart(2, '0');
+    return `${month} ${day} ${hours}:${mins}`;
+  } catch {
+    return fallbackLabel || timeStr;
+  }
+};
+
 export const AnalyticsPanel: React.FC<AnalyticsPanelProps> = ({
   statistics,
   timeseriesData,
@@ -61,7 +76,12 @@ export const AnalyticsPanel: React.FC<AnalyticsPanelProps> = ({
   selectedObservation,
   currentTimeIndex,
 }) => {
-  const currentStepLabel = timeseriesData[currentTimeIndex]?.label;
+  const chartData = timeseriesData.map((pt) => ({
+    ...pt,
+    uniqueLabel: formatUniqueTimestepLabel(pt.time, pt.label),
+  }));
+
+  const currentStepLabel = chartData[currentTimeIndex]?.uniqueLabel;
 
   return (
     <div className="w-full bg-slate-950/85 glass-panel border-t border-sky-500/20 px-3.5 py-2.5 text-slate-200 select-none">
@@ -134,9 +154,9 @@ export const AnalyticsPanel: React.FC<AnalyticsPanelProps> = ({
 
           <div className="flex-1 w-full min-h-0">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={timeseriesData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+              <LineChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="2 2" stroke="#1e293b" opacity={0.6} />
-                <XAxis dataKey="label" stroke="#64748b" tick={{ fontSize: 8.5, fontFamily: 'var(--font-mono)' }} />
+                <XAxis dataKey="uniqueLabel" stroke="#64748b" tick={{ fontSize: 8, fontFamily: 'var(--font-mono)' }} />
                 <YAxis stroke="#64748b" domain={['auto', 'auto']} tick={{ fontSize: 8.5, fontFamily: 'var(--font-mono)' }} />
                 <Tooltip content={<CustomTelemetryTooltip unit={currentParameter.unit} />} />
                 {currentStepLabel && (
@@ -184,9 +204,9 @@ export const AnalyticsPanel: React.FC<AnalyticsPanelProps> = ({
 
           <div className="flex-1 w-full min-h-0">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={timeseriesData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+              <BarChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="2 2" stroke="#1e293b" opacity={0.6} />
-                <XAxis dataKey="label" stroke="#64748b" tick={{ fontSize: 8.5, fontFamily: 'var(--font-mono)' }} />
+                <XAxis dataKey="uniqueLabel" stroke="#64748b" tick={{ fontSize: 8, fontFamily: 'var(--font-mono)' }} />
                 <YAxis stroke="#64748b" tick={{ fontSize: 8.5, fontFamily: 'var(--font-mono)' }} />
                 <ReferenceLine y={0} stroke="#94a3b8" strokeWidth={1} />
                 {currentStepLabel && (
@@ -194,7 +214,7 @@ export const AnalyticsPanel: React.FC<AnalyticsPanelProps> = ({
                 )}
                 <Tooltip content={<CustomTelemetryTooltip unit={currentParameter.unit} />} />
                 <Bar dataKey="difference" name="Difference" radius={[2, 2, 0, 0]}>
-                  {timeseriesData.map((entry, index) => (
+                  {chartData.map((entry, index) => (
                     <Cell
                       key={`cell-${index}`}
                       fill={entry.difference >= 0 ? '#ef4444' : '#0284c7'}

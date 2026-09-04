@@ -54,6 +54,13 @@ export const App: React.FC = () => {
   const [isLeftPanelCollapsed, setIsLeftPanelCollapsed] = useState<boolean>(false);
   const [isRightPanelCollapsed, setIsRightPanelCollapsed] = useState<boolean>(false);
 
+  // Request sequence refs to prevent out-of-order async response overwrites
+  const reqSeqRef = useRef<number>(0);
+  const tsReqSeqRef = useRef<number>(0);
+
+  // Pending station ID for reliable Demo Flow preset execution
+  const pendingStationIdRef = useRef<string | null>(null);
+
   // 1. Initial configuration load
   useEffect(() => {
     async function initApp() {
@@ -67,7 +74,7 @@ export const App: React.FC = () => {
         setCurrentParameter(paramsList[0] || null);
 
         setRegions(regionsList);
-        // Default to Bay of Bengal (SIH Disaster Priority)
+        // Default to Bay of Bengal
         const bob = regionsList.find(r => r.id === 'bay_of_bengal') || regionsList[0];
         setCurrentRegion(bob || null);
 
@@ -80,22 +87,49 @@ export const App: React.FC = () => {
     initApp();
   }, []);
 
-  // 2. Data fetching when parameters, region, depth, or time changes
+  // 2a. Timeseries data fetching: decoupled from timeline timestep playback
+  // Only re-fetches when region, parameter, depth, or selected station changes
+  const loadTimeseriesData = useCallback(async () => {
+    if (!currentParameter || !currentRegion) return;
+    const currentTsSeq = ++tsReqSeqRef.current;
+    try {
+      const data = await fetchTimeseries(
+        currentRegion.id,
+        currentParameter.id,
+        currentDepth,
+        selectedObservation?.id
+      );
+      if (currentTsSeq === tsReqSeqRef.current) {
+        setTimeseriesData(data);
+      }
+    } catch (err) {
+      console.warn('Timeseries fetch failed:', err);
+    }
+  }, [currentRegion?.id, currentParameter?.id, currentDepth, selectedObservation?.id]);
+
+  useEffect(() => {
+    loadTimeseriesData();
+  }, [loadTimeseriesData]);
+
+  // 2b. Ocean telemetry & grid data fetching when parameter, region, depth, or time changes
   const loadOceanData = useCallback(async () => {
     if (!currentParameter || !currentRegion || timesteps.length === 0) return;
     const timeStr = timesteps[currentTimeIndex];
     if (!timeStr) return;
 
+    const currentSeq = ++reqSeqRef.current;
     setIsLoading(true);
     try {
-      const [gridRes, obsRes, compRes, anomsRes, statsRes, tsRes] = await Promise.allSettled([
+      const [gridRes, obsRes, compRes, anomsRes, statsRes] = await Promise.allSettled([
         fetchOceanData(currentRegion.id, currentParameter.id, currentDepth, timeStr),
         fetchObservations(currentRegion.id, currentParameter.id, currentDepth, timeStr),
         fetchComparison(currentRegion.id, currentParameter.id, currentDepth, timeStr),
         fetchAnomalies(currentRegion.id, currentParameter.id, currentDepth, timeStr),
-        fetchStatistics(currentRegion.id, currentParameter.id, currentDepth, timeStr),
-        fetchTimeseries(currentRegion.id, currentParameter.id, currentDepth, selectedObservation?.id)
+        fetchStatistics(currentRegion.id, currentParameter.id, currentDepth, timeStr)
       ]);
+
+      // Discard older requests if a newer request has started
+      if (currentSeq !== reqSeqRef.current) return;
 
       if (gridRes.status === 'fulfilled') {
         setGridData(gridRes.value);
@@ -106,10 +140,24 @@ export const App: React.FC = () => {
       if (obsRes.status === 'fulfilled') {
         const obs = obsRes.value;
         setObservations(obs);
-        // Keep selected observation fresh with latest timestep values
-        if (selectedObservation) {
-          const updatedObs = obs.find(o => o.id === selectedObservation.id);
-          if (updatedObs) setSelectedObservation(updatedObs);
+
+        // Bind pending demo station or validate existing station in fresh observations
+        if (pendingStationIdRef.current) {
+          const targetStation = obs.find(o => o.id === pendingStationIdRef.current);
+          if (targetStation) {
+            setSelectedObservation(targetStation);
+            pendingStationIdRef.current = null;
+          } else {
+            setSelectedObservation(null);
+          }
+        } else {
+          // Region Switch State Integrity:
+          // Keep selected observation fresh if it exists in the new observations list, else null
+          setSelectedObservation(prev => {
+            if (!prev) return null;
+            const updatedObs = obs.find(o => o.id === prev.id);
+            return updatedObs || null;
+          });
         }
       } else {
         console.warn('Observations fetch failed:', obsRes.reason);
@@ -132,18 +180,14 @@ export const App: React.FC = () => {
       } else {
         console.warn('Statistics fetch failed:', statsRes.reason);
       }
-
-      if (tsRes.status === 'fulfilled') {
-        setTimeseriesData(tsRes.value);
-      } else {
-        console.warn('Timeseries fetch failed:', tsRes.reason);
-      }
     } catch (err) {
       console.error('Failed to load ocean data:', err);
     } finally {
-      setIsLoading(false);
+      if (currentSeq === reqSeqRef.current) {
+        setIsLoading(false);
+      }
     }
-  }, [currentParameter, currentRegion, currentDepth, currentTimeIndex, timesteps, selectedObservation?.id]);
+  }, [currentParameter, currentRegion, currentDepth, currentTimeIndex, timesteps]);
 
   useEffect(() => {
     loadOceanData();
@@ -169,7 +213,13 @@ export const App: React.FC = () => {
 
   // 5. Select station from inspector or anomaly alert
   const handleSelectObservation = (obs: ObservationPoint | null) => {
+    pendingStationIdRef.current = null;
     setSelectedObservation(obs);
+  };
+
+  const handleSelectRegion = (reg: RegionInfo) => {
+    pendingStationIdRef.current = null;
+    setCurrentRegion(reg);
   };
 
   const handleSelectParameter = (param: ParameterInfo) => {
@@ -184,14 +234,17 @@ export const App: React.FC = () => {
     if (target) setSelectedObservation(target);
   };
 
-  // 6. PRIMARY SIH DEMO FLOW PRESET:
+  // 6. PRIMARY DEMO FLOW PRESET:
   // Step 1: Bay of Bengal
   // Step 2: Sea Surface Temperature
   // Step 3: 10m depth
   // Step 4: Step 2 time
-  // Step 5: Enable Model, Observations, Difference, Anomaly
-  // Step 6: Select RAMA-BD02 observation
+  // Step 5: Enable Model, Observations, Difference, Anomaly, Current Vectors
+  // Step 6: Bind RAMA-BD02 observation upon fresh fetch resolution
   const handleRunDemoPreset = () => {
+    // Stage intended demo station for resolution upon fetch
+    pendingStationIdRef.current = 'RAMA-BD02';
+
     const bob = regions.find(r => r.id === 'bay_of_bengal');
     if (bob) setCurrentRegion(bob);
 
@@ -208,12 +261,6 @@ export const App: React.FC = () => {
       anomaly: true,
       currentVectors: true,
     });
-
-    // Auto-select RAMA-BD02 which has an elevated thermal anomaly
-    const targetStation = observations.find(o => o.id === 'RAMA-BD02') || observations[0];
-    if (targetStation) {
-      setSelectedObservation(targetStation);
-    }
   };
 
   if (!currentParameter || !currentRegion) {
@@ -260,7 +307,7 @@ export const App: React.FC = () => {
           onTogglePlay={() => setIsPlaying(p => !p)}
           regions={regions}
           currentRegion={currentRegion}
-          onSelectRegion={setCurrentRegion}
+          onSelectRegion={handleSelectRegion}
           layers={layers}
           onToggleLayer={handleToggleLayer}
           isCollapsed={isLeftPanelCollapsed}
