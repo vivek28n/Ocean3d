@@ -73,7 +73,7 @@ export const Header: React.FC<HeaderProps> = ({
         <button
           onClick={onRunDemoPreset}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 text-cyan-200 hover:text-white border border-sky-400/40 font-semibold text-xs transition-colors cursor-pointer shadow-sm shadow-sky-950/40"
-          title="Load the standard SIH Bay of Bengal Disaster Demo Flow"
+          title="Load the standard Bay of Bengal Disaster Demo Flow"
         >
           <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
           <span>Demo Flow</span>

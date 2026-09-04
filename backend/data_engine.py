@@ -63,7 +63,7 @@ DEPTH_LEVELS: List[float] = [0.0, 10.0, 50.0, 100.0, 500.0]
 REGIONS: Dict[str, RegionInfo] = {
     "bay_of_bengal": RegionInfo(
         id="bay_of_bengal",
-        name="Bay of Bengal (SIH Priority)",
+        name="Bay of Bengal",
         lat_min=5.0,
         lat_max=22.5,
         lon_min=80.0,
@@ -71,7 +71,7 @@ REGIONS: Dict[str, RegionInfo] = {
         center_lat=14.5,
         center_lon=88.5,
         default_zoom=4.5,
-        description="Primary SIH Disaster Management focus area. Intense cyclone activity, low salinity freshwater lens from Ganga-Brahmaputra, and warm SST pools."
+        description="Primary Disaster Management focus area. Intense cyclone activity, low salinity freshwater lens from Ganga-Brahmaputra, and warm SST pools."
     ),
     "arabian_sea": RegionInfo(
         id="arabian_sea",

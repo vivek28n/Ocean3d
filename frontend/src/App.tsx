@@ -277,7 +277,7 @@ export const App: React.FC = () => {
   }
 
   return (
-    <div className="w-screen h-screen flex flex-col bg-[#030712] overflow-hidden">
+    <div className="w-screen h-screen flex flex-col bg-[#030712] overflow-visible">
       
       {/* 1. TOP HEADER */}
       <Header
@@ -317,7 +317,7 @@ export const App: React.FC = () => {
         {/* CENTER 3D OCEAN VIEWPORT */}
         <main className="flex-1 relative h-full overflow-hidden">
           {/* Floating Risk & Decision Support HUD anchored to upper portion of 3D canvas */}
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 w-[94%] max-w-2xl pointer-events-auto">
+          <div className="absolute top-14 left-1/2 -translate-x-1/2 z-40 w-[94%] max-w-2xl pointer-events-auto flex flex-col gap-2">
             <RiskDecisionSupport
               anomalies={anomalies}
               currentParameter={currentParameter}
