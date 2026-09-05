@@ -2,7 +2,7 @@ import React from 'react';
 import { ObservationPoint, ParameterInfo } from '../types';
 import {
   MapPin, AlertOctagon, CheckCircle2, AlertTriangle,
-  Compass, Gauge, Activity, ShieldAlert, X
+  Compass, Gauge, Activity, ShieldAlert, X, HelpCircle
 } from 'lucide-react';
 
 interface LocationInspectorProps {
@@ -14,6 +14,7 @@ interface LocationInspectorProps {
   onSelectStation: (obs: ObservationPoint) => void;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
+  isLoading?: boolean;
 }
 
 export const LocationInspector: React.FC<LocationInspectorProps> = ({
@@ -24,8 +25,21 @@ export const LocationInspector: React.FC<LocationInspectorProps> = ({
   allObservations,
   onSelectStation,
   isCollapsed = false,
-  onToggleCollapse
+  onToggleCollapse,
+  isLoading = false
 }) => {
+  // Dynamically resolve matching observation from allObservations for current parameter
+  const targetObs = React.useMemo(() => {
+    if (!selectedObservation) return null;
+    const foundInAll = allObservations.find(o => o.id === selectedObservation.id);
+    if (foundInAll) return foundInAll;
+    return selectedObservation;
+  }, [selectedObservation, allObservations]);
+
+  // Determine if targetObs metrics are synchronized to the active parameter
+  const isSynchronized =
+    !isLoading &&
+    Boolean(targetObs && (!targetObs.parameter || targetObs.parameter === currentParameter.id));
   if (isCollapsed) {
     return (
       <aside className="w-11 h-full flex flex-col items-center py-3 glass-panel border-l border-sky-500/20 text-slate-200 z-20 shrink-0 select-none">
@@ -47,6 +61,54 @@ export const LocationInspector: React.FC<LocationInspectorProps> = ({
       </aside>
     );
   }
+
+  const renderStatusBadge = (status?: string) => {
+    switch (status) {
+      case 'LIVE':
+      case 'LIVE MODEL':
+        return (
+          <span className="text-[9px] uppercase px-1.5 py-0.5 rounded font-bold tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+            ● LIVE MODEL FORECAST
+          </span>
+        );
+      case 'LIVE SATELLITE':
+        return (
+          <span className="text-[9px] uppercase px-1.5 py-0.5 rounded font-bold tracking-wider bg-teal-500/20 text-teal-300 border border-teal-500/40">
+            ● LIVE SATELLITE RADIOMETRY
+          </span>
+        );
+      case 'OBSERVATIONAL PRODUCT':
+        return (
+          <span className="text-[9px] uppercase px-1.5 py-0.5 rounded font-bold tracking-wider bg-sky-500/20 text-sky-300 border border-sky-500/40">
+            OBSERVATIONAL PRODUCT
+          </span>
+        );
+      case 'DERIVED':
+        return (
+          <span className="text-[9px] uppercase px-1.5 py-0.5 rounded font-bold tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
+            DERIVED STRATIFICATION
+          </span>
+        );
+      case 'FALLBACK':
+        return (
+          <span className="text-[9px] uppercase px-1.5 py-0.5 rounded font-bold tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40">
+            OFFLINE FALLBACK
+          </span>
+        );
+      case 'UNAVAILABLE':
+        return (
+          <span className="text-[9px] uppercase px-1.5 py-0.5 rounded font-bold tracking-wider bg-slate-800 text-slate-400 border border-slate-700">
+            UNAVAILABLE AT {currentDepth}M
+          </span>
+        );
+      default:
+        return (
+          <span className="text-[9px] uppercase px-1.5 py-0.5 rounded font-bold tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/40">
+            SIMULATED / DEMO
+          </span>
+        );
+    }
+  };
 
   return (
     <aside className="w-80 h-full flex flex-col gap-2.5 p-3 overflow-y-auto glass-panel border-l border-sky-500/20 text-slate-200 text-xs shrink-0 select-none transition-all">
@@ -79,21 +141,21 @@ export const LocationInspector: React.FC<LocationInspectorProps> = ({
         )}
       </div>
 
-      {selectedObservation ? (
+      {targetObs ? (
         <div className="space-y-2.5">
           {/* Station Metadata Identity Card */}
           <div className="bg-slate-900/70 p-3 rounded-xl border border-sky-500/20">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <div className="text-white font-semibold text-sm leading-tight truncate">
-                  {selectedObservation.platform_name}
+                  {targetObs.platform_name}
                 </div>
                 <div className="text-[10px] text-slate-400 font-mono mt-0.5 flex items-center gap-1.5">
-                  <span className="text-cyan-400 font-medium">Type: {selectedObservation.platform_type}</span>
+                  <span className="text-cyan-400 font-medium">{targetObs.platform_type}</span>
                 </div>
               </div>
               <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-slate-800/90 border border-slate-700/80 text-cyan-300 shrink-0 font-medium">
-                {selectedObservation.id}
+                {targetObs.id}
               </span>
             </div>
 
@@ -101,17 +163,31 @@ export const LocationInspector: React.FC<LocationInspectorProps> = ({
             <div className="grid grid-cols-2 gap-1.5 mt-2.5 pt-2 border-t border-slate-800 text-[11px] font-mono">
               <div className="bg-slate-950/70 px-2 py-1.5 rounded-lg border border-slate-800/80">
                 <span className="text-slate-400 block text-[9px] uppercase tracking-wider">Latitude</span>
-                <span className="text-slate-100 font-semibold">{selectedObservation.lat.toFixed(2)}° N</span>
+                <span className="text-slate-100 font-semibold">{targetObs.lat.toFixed(2)}° N</span>
               </div>
               <div className="bg-slate-950/70 px-2 py-1.5 rounded-lg border border-slate-800/80">
                 <span className="text-slate-400 block text-[9px] uppercase tracking-wider">Longitude</span>
-                <span className="text-slate-100 font-semibold">{selectedObservation.lon.toFixed(2)}° E</span>
+                <span className="text-slate-100 font-semibold">{targetObs.lon.toFixed(2)}° E</span>
               </div>
             </div>
 
             <div className="mt-2 text-[10px] text-slate-400 flex items-center justify-between px-1">
-              <span>Depth Stratum:</span>
-              <span className="font-mono text-cyan-300 font-medium">{currentDepth}m (Sensor: {selectedObservation.depth}m)</span>
+              <span>Selected Depth:</span>
+              <span className="font-mono text-cyan-300 font-medium">{currentDepth}m</span>
+            </div>
+
+            {/* Data Status and Provenance Attribution */}
+            <div className="mt-2.5 pt-2 border-t border-slate-800/80 flex flex-col gap-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[9.5px] uppercase text-slate-400 font-medium">Data Status:</span>
+                {renderStatusBadge(targetObs.data_status)}
+              </div>
+              {targetObs.source_attribution && (
+                <div className="text-[9.5px] text-slate-400 font-mono truncate">
+                  <span className="text-cyan-400">Provenance: </span>
+                  {targetObs.source_attribution}
+                </div>
+              )}
             </div>
           </div>
 
@@ -126,60 +202,89 @@ export const LocationInspector: React.FC<LocationInspectorProps> = ({
               </span>
             </div>
 
-            {/* Numerical Grid: Model vs In-Situ */}
-            <div className="grid grid-cols-2 gap-2 pt-0.5">
-              {/* Numerical Model */}
-              <div className="bg-slate-950/80 p-2 rounded-lg border border-sky-500/20">
-                <span className="text-[9.5px] uppercase font-semibold text-slate-400 block">Model Value</span>
-                <div className="font-mono font-bold text-sm text-cyan-300 mt-0.5">
-                  {selectedObservation.model_value.toFixed(2)}
-                  <span className="text-[10px] text-slate-400 font-normal ml-1">{currentParameter.unit}</span>
+            {!isSynchronized ? (
+              /* Synchronizing indicator while new parameter comparison is fetching */
+              <div className="p-3 rounded-lg bg-slate-950/80 border border-sky-500/20 text-center space-y-1.5">
+                <div className="flex items-center justify-center gap-2 text-cyan-300 font-mono text-xs">
+                  <div className="w-3.5 h-3.5 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+                  <span>Synchronizing {currentParameter.name}...</span>
                 </div>
+                <p className="text-[9.5px] text-slate-400 font-mono">
+                  Loading real-time {currentParameter.name} telemetry ({currentParameter.unit})
+                </p>
               </div>
+            ) : targetObs.is_observed_available && targetObs.observed_value !== null ? (
+              <>
+                <div className="grid grid-cols-2 gap-2 pt-0.5">
+                  {/* Numerical Model */}
+                  <div className="bg-slate-950/80 p-2 rounded-lg border border-sky-500/20">
+                    <span className="text-[9.5px] uppercase font-semibold text-slate-400 block">Model Value</span>
+                    <div className="font-mono font-bold text-sm text-cyan-300 mt-0.5">
+                      {currentParameter.id === 'ssh' ? targetObs.model_value.toFixed(3) : targetObs.model_value.toFixed(2)}
+                      <span className="text-[10px] text-slate-400 font-normal ml-1">{currentParameter.unit}</span>
+                    </div>
+                  </div>
 
-              {/* In-Situ Observation */}
-              <div className="bg-slate-950/80 p-2 rounded-lg border border-emerald-500/20">
-                <span className="text-[9.5px] uppercase font-semibold text-slate-400 block">Observed Value</span>
-                <div className="font-mono font-bold text-sm text-emerald-400 mt-0.5">
-                  {selectedObservation.observed_value.toFixed(2)}
-                  <span className="text-[10px] text-slate-400 font-normal ml-1">{currentParameter.unit}</span>
+                  {/* In-Situ Observation */}
+                  <div className="bg-slate-950/80 p-2 rounded-lg border border-emerald-500/20">
+                    <span className="text-[9.5px] uppercase font-semibold text-slate-400 block">Observed Value</span>
+                    <div className="font-mono font-bold text-sm text-emerald-400 mt-0.5">
+                      {currentParameter.id === 'ssh' ? targetObs.observed_value.toFixed(3) : targetObs.observed_value.toFixed(2)}
+                      <span className="text-[10px] text-slate-400 font-normal ml-1">{currentParameter.unit}</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
 
-            {/* Calculated Difference Row (Observed - Model) */}
-            <div className={`p-2 rounded-lg border ${
-              selectedObservation.difference > 0
-                ? 'bg-rose-950/25 border-rose-500/30'
-                : selectedObservation.difference < 0
-                ? 'bg-sky-950/25 border-sky-500/30'
-                : 'bg-slate-950/80 border-slate-800'
-            }`}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="text-slate-300 font-medium text-xs block">Difference (Obs - Model):</span>
-                  <span className="text-[9.5px] text-slate-400 font-mono">
-                    {selectedObservation.difference > 0
-                      ? 'Positive Residual (Obs > Model)'
-                      : selectedObservation.difference < 0
-                      ? 'Negative Residual (Obs < Model)'
-                      : 'Zero Residual (Equilibrium)'}
-                  </span>
-                </div>
-                <div className="text-right">
-                  <span className={`font-mono font-bold text-base ${
-                    selectedObservation.difference > 0
-                      ? 'text-rose-400'
-                      : selectedObservation.difference < 0
-                      ? 'text-sky-400'
-                      : 'text-slate-300'
+                {/* Difference Row */}
+                {targetObs.difference !== null && (
+                  <div className={`p-2 rounded-lg border ${
+                    targetObs.difference > 0
+                      ? 'bg-rose-950/25 border-rose-500/30'
+                      : targetObs.difference < 0
+                      ? 'bg-sky-950/25 border-sky-500/30'
+                      : 'bg-slate-950/80 border-slate-800'
                   }`}>
-                    {selectedObservation.difference > 0 ? '+' : ''}{selectedObservation.difference.toFixed(3)}
-                  </span>
-                  <span className="text-[10px] font-mono text-slate-400 ml-1">{currentParameter.unit}</span>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="text-slate-300 font-medium text-xs block">Difference (Obs - Model):</span>
+                        <span className="text-[9.5px] text-slate-400 font-mono">
+                          {targetObs.difference > 0
+                            ? 'Positive Residual (Obs > Model)'
+                            : targetObs.difference < 0
+                            ? 'Negative Residual (Obs < Model)'
+                            : 'Zero Residual (Equilibrium)'}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span className={`font-mono font-bold text-base ${
+                          targetObs.difference > 0
+                            ? 'text-rose-400'
+                            : targetObs.difference < 0
+                            ? 'text-sky-400'
+                            : 'text-slate-300'
+                        }`}>
+                          {targetObs.difference > 0 ? '+' : ''}{currentParameter.id === 'ssh' ? targetObs.difference.toFixed(3) : targetObs.difference.toFixed(2)}
+                        </span>
+                        <span className="text-[10px] font-mono text-slate-400 ml-1">{currentParameter.unit}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="p-3 rounded-lg bg-slate-950/80 border border-slate-800 space-y-1.5 text-center">
+                <div className="flex items-center justify-center gap-1.5 text-slate-400 font-medium text-xs">
+                  <HelpCircle className="w-4 h-4 text-amber-400" />
+                  <span>No Observation at {currentDepth}m</span>
+                </div>
+                <p className="text-[10px] text-slate-400 font-mono">
+                  This platform is not instrumented for {currentDepth}m depth. Model value: {currentParameter.id === 'ssh' ? targetObs.model_value.toFixed(3) : targetObs.model_value.toFixed(2)} {currentParameter.unit}.
+                </p>
+                <div className="text-[9px] text-amber-300/80 font-mono">
+                  Real data constraint: No artificial values fabricated.
                 </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Anomaly Detection Assessment & Z-Score */}
@@ -188,23 +293,33 @@ export const LocationInspector: React.FC<LocationInspectorProps> = ({
               <span className="text-slate-300 font-semibold uppercase tracking-wider text-[10px]">
                 Anomaly Detection Assessment
               </span>
-              <span className="font-mono font-bold text-xs px-2 py-0.5 rounded bg-slate-800/90 border border-slate-700 text-white">
-                Z = {selectedObservation.z_score.toFixed(2)}
-              </span>
+              {!isSynchronized ? (
+                <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-slate-800/60 border border-slate-700 text-slate-400">
+                  Syncing...
+                </span>
+              ) : targetObs.z_score !== null ? (
+                <span className="font-mono font-bold text-xs px-2 py-0.5 rounded bg-slate-800/90 border border-slate-700 text-white">
+                  Z = {targetObs.z_score.toFixed(2)}
+                </span>
+              ) : (
+                <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-slate-800/60 border border-slate-700 text-slate-400">
+                  N/A
+                </span>
+              )}
             </div>
 
             {/* Severity Status Badge */}
-            {selectedObservation.anomaly_severity === 'NORMAL' && (
+            {targetObs.anomaly_severity === 'NORMAL' && (
               <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                 <div className="min-w-0">
                   <div className="font-bold text-xs uppercase tracking-wide">NORMAL</div>
-                  <div className="text-[9.5px] text-emerald-400/90 leading-tight">Deviation within |Z| &lt; 1.5 baseline threshold.</div>
+                  <div className="text-[9.5px] text-emerald-400/90 leading-tight">Deviation within baseline threshold.</div>
                 </div>
               </div>
             )}
 
-            {selectedObservation.anomaly_severity === 'MODERATE DEVIATION' && (
+            {targetObs.anomaly_severity === 'MODERATE DEVIATION' && (
               <div className="flex items-center gap-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300">
                 <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
                 <div className="min-w-0">
@@ -214,7 +329,7 @@ export const LocationInspector: React.FC<LocationInspectorProps> = ({
               </div>
             )}
 
-            {selectedObservation.anomaly_severity === 'SIGNIFICANT ANOMALY' && (
+            {targetObs.anomaly_severity === 'SIGNIFICANT ANOMALY' && (
               <div className="flex items-center gap-2 p-2 rounded-lg bg-rose-500/15 border border-rose-500/40 text-rose-300 shadow-sm shadow-rose-950/40">
                 <AlertOctagon className="w-4 h-4 text-rose-400 shrink-0" />
                 <div className="min-w-0">
@@ -224,10 +339,10 @@ export const LocationInspector: React.FC<LocationInspectorProps> = ({
               </div>
             )}
 
-            {/* Existing Explanation/Reason */}
+            {/* Explanation/Reason */}
             <div className="text-[10px] text-slate-300 leading-relaxed bg-slate-950/50 p-2 rounded-lg border border-slate-800/80">
               <span className="text-slate-400 block font-semibold text-[9px] uppercase tracking-wider mb-0.5">EXPLANATION</span>
-              {selectedObservation.anomaly_reason}
+              {!isSynchronized ? "Updating model and observation telemetry..." : targetObs.anomaly_reason}
             </div>
           </div>
 
@@ -238,61 +353,54 @@ export const LocationInspector: React.FC<LocationInspectorProps> = ({
               <span>Location Decision Support</span>
             </div>
             <p className="text-[10.5px] text-slate-200 leading-relaxed font-sans">
-              {selectedObservation.decision_support}
+              {!isSynchronized ? "Assessing location-specific advisory..." : targetObs.decision_support}
             </p>
           </div>
         </div>
       ) : (
-        /* Empty State: Clear prompt + In-Situ Station directory */
-        <div className="flex flex-col gap-3">
-          <div className="p-3.5 rounded-xl bg-slate-900/50 border border-dashed border-sky-500/25 text-center">
-            <MapPin className="w-7 h-7 text-sky-400/60 mx-auto mb-1.5" />
-            <div className="font-semibold text-slate-200 text-xs">No Observation Selected</div>
-            <p className="text-[10.5px] text-slate-400 mt-0.5 leading-normal">
-              Click any 3D buoy beacon or select a station below to inspect telemetry and comparison metrics.
-            </p>
+        /* Empty State: Station Selector List */
+        <div className="space-y-2">
+          <div className="p-2.5 rounded-xl bg-slate-900/60 border border-sky-500/15 text-center">
+            <MapPin className="w-5 h-5 text-cyan-400 mx-auto mb-1 opacity-75" />
+            <span className="text-slate-200 font-medium block text-xs">Select In-Situ Platform</span>
+            <span className="text-[10px] text-slate-400 font-mono">
+              Click a marker on the 3D globe or pick below
+            </span>
           </div>
 
-          <div>
-            <div className="flex items-center justify-between mb-1.5 px-0.5">
-              <span className="font-semibold text-cyan-300 uppercase tracking-wider text-[10px]">
-                Available In-Situ Stations
-              </span>
-              <span className="font-mono text-[9.5px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 border border-slate-700">
-                {allObservations.length}
-              </span>
-            </div>
-            <div className="space-y-1.5">
-              {allObservations.map((obs) => {
-                const isAnom = obs.anomaly_severity === 'SIGNIFICANT ANOMALY';
-                const isMod = obs.anomaly_severity === 'MODERATE DEVIATION';
-                return (
-                  <button
-                    key={obs.id}
-                    onClick={() => onSelectStation(obs)}
-                    className={`w-full p-2 rounded-lg text-left transition-all border flex items-center justify-between ${
-                      isAnom
-                        ? 'bg-rose-950/20 border-rose-500/35 hover:bg-rose-900/30'
-                        : isMod
-                        ? 'bg-amber-950/15 border-amber-500/30 hover:bg-amber-900/25'
-                        : 'bg-slate-800/40 border-slate-700/50 hover:bg-slate-800/80 hover:border-sky-500/30'
-                    }`}
-                  >
-                    <div className="truncate min-w-0 pr-2">
-                      <div className="font-medium text-slate-200 truncate text-xs">{obs.platform_name}</div>
-                      <div className="text-[9.5px] font-mono text-slate-400">
-                        {obs.lat.toFixed(1)}°N, {obs.lon.toFixed(1)}°E
-                      </div>
+          <div className="space-y-1 max-h-[calc(100vh-280px)] overflow-y-auto pr-0.5">
+            {allObservations.map((obs) => {
+              const isAvailable = obs.is_observed_available && obs.observed_value !== null;
+              return (
+                <button
+                  key={obs.id}
+                  onClick={() => onSelectStation(obs)}
+                  className="w-full text-left p-2 rounded-lg bg-slate-800/40 hover:bg-slate-800 border border-slate-700/50 hover:border-sky-500/40 transition-all flex items-center justify-between group cursor-pointer"
+                >
+                  <div className="min-w-0 pr-1.5">
+                    <div className="text-slate-200 font-medium text-xs truncate group-hover:text-cyan-300 transition-colors">
+                      {obs.platform_name}
                     </div>
-                    <span className={`font-mono text-[9px] px-1.5 py-0.5 rounded font-bold shrink-0 ${
-                      isAnom ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : isMod ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                    }`}>
-                      {obs.anomaly_severity === 'SIGNIFICANT ANOMALY' ? 'ANOMALY' : obs.anomaly_severity === 'MODERATE DEVIATION' ? 'DEV' : 'NORM'}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+                    <div className="text-[9.5px] text-slate-400 font-mono mt-0.5 flex items-center gap-1">
+                      <span>{obs.platform_type}</span>
+                      <span>•</span>
+                      <span>{obs.lat.toFixed(1)}°N, {obs.lon.toFixed(1)}°E</span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end shrink-0 gap-1">
+                    {isAvailable ? (
+                      <span className="font-mono text-xs font-semibold text-emerald-400">
+                        {currentParameter.id === 'ssh' ? obs.observed_value?.toFixed(3) : obs.observed_value?.toFixed(1)} {currentParameter.unit}
+                      </span>
+                    ) : (
+                      <span className="font-mono text-[9.5px] text-slate-500">
+                        N/A at {currentDepth}m
+                      </span>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}

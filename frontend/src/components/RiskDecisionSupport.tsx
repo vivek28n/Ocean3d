@@ -163,7 +163,7 @@ export const RiskDecisionSupport: React.FC<RiskDecisionSupportProps> = ({
                 >
                   <span>{a.platform_name}</span>
                   <span className={a.severity === 'SIGNIFICANT ANOMALY' ? 'text-rose-400 font-semibold' : 'text-amber-400 font-semibold'}>
-                    (Z={a.z_score.toFixed(1)})
+                    {a.z_score !== null && a.z_score !== undefined ? `(Z=${a.z_score.toFixed(1)})` : ''}
                   </span>
                 </button>
               ))}

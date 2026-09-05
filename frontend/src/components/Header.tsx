@@ -21,6 +21,67 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const formattedTime = currentTimestamp ? new Date(currentTimestamp).toUTCString() : 'Syncing...';
 
+  const getProvenanceBadge = () => {
+    switch (currentParameter.id) {
+      case 'sst':
+        return {
+          status: 'LIVE MODEL',
+          label: 'Open-Meteo Marine / Copernicus Forecast',
+          pulseColor: 'bg-emerald-400'
+        };
+      case 'current_velocity':
+        return {
+          status: 'LIVE MODEL',
+          label: 'Open-Meteo / Copernicus GLO-Currents',
+          pulseColor: 'bg-emerald-400'
+        };
+      case 'wind_speed':
+        return {
+          status: 'LIVE MODEL',
+          label: 'Open-Meteo Weather / ECMWF-GFS 10m Wind',
+          pulseColor: 'bg-emerald-400'
+        };
+      case 'surface_pressure':
+        return {
+          status: 'LIVE MODEL',
+          label: 'Open-Meteo Weather / ECMWF-GFS MSL Pressure',
+          pulseColor: 'bg-emerald-400'
+        };
+      case 'ssh':
+        return {
+          status: 'LIVE SATELLITE',
+          label: 'NOAA CoastWatch Daily Altimetry SLA',
+          pulseColor: 'bg-teal-400'
+        };
+      case 'chlorophyll':
+        return {
+          status: 'LIVE SATELLITE',
+          label: 'NOAA CoastWatch VIIRS Daily Ocean Color',
+          pulseColor: 'bg-teal-400'
+        };
+      case 'salinity':
+        return {
+          status: 'OBSERVATIONAL PRODUCT',
+          label: 'NOAA PMEL RFROM v2.3 Real-Time (Argo 0.25° Gridded)',
+          pulseColor: 'bg-sky-400'
+        };
+      case 'oxygen':
+        return {
+          status: 'OBSERVATIONAL PRODUCT',
+          label: 'NOAA PMEL GOBAI-O2 (BGC-Argo Dec 2025)',
+          pulseColor: 'bg-sky-400'
+        };
+      default:
+        return {
+          status: currentParameter.data_status || 'DERIVED',
+          label: 'Calibrated Ocean Model Baseline',
+          pulseColor: 'bg-amber-400'
+        };
+    }
+  };
+
+  const prov = getProvenanceBadge();
+
   return (
     <header className="w-full h-14 bg-slate-950/90 glass-panel border-b border-sky-500/20 px-3.5 sm:px-4 flex items-center justify-between z-30 select-none">
       
@@ -44,11 +105,14 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Center Status Indicators */}
       <div className="hidden lg:flex items-center gap-2.5">
-        {/* Prototype Indicator */}
+        {/* Dynamic Provenance & Operational State Indicator */}
         <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-slate-900/80 border border-sky-500/20 text-xs">
-          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
+          <span className={`w-1.5 h-1.5 rounded-full ${prov.pulseColor} animate-pulse`}></span>
+          <span className="text-cyan-300 font-mono text-[9px] font-bold tracking-wider px-1.5 py-0.5 rounded bg-sky-500/15 border border-sky-500/30 uppercase">
+            {prov.status}
+          </span>
           <span className="text-slate-300 font-mono text-[10px] tracking-tight">
-            Synthetic Ocean Model + Simulated In-Situ Telemetry
+            {prov.label}
           </span>
         </div>
 

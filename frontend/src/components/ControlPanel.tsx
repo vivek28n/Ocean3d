@@ -2,7 +2,8 @@ import React from 'react';
 import { ParameterInfo, RegionInfo, ActiveLayers } from '../types';
 import {
   Thermometer, Droplet, Waves, Wind, Play, Pause,
-  ChevronLeft, ChevronRight, Eye, AlertTriangle, Layers, MapPin, Lock
+  ChevronLeft, ChevronRight, Eye, AlertTriangle, Layers, MapPin, Lock,
+  Activity, Leaf, Navigation, Gauge
 } from 'lucide-react';
 
 interface ControlPanelProps {
@@ -52,9 +53,19 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
       case 'salinity': return <Droplet className="w-4 h-4 text-emerald-400" />;
       case 'ssh': return <Waves className="w-4 h-4 text-sky-400" />;
       case 'current_velocity': return <Wind className="w-4 h-4 text-purple-400" />;
+      case 'oxygen': return <Activity className="w-4 h-4 text-cyan-400" />;
+      case 'chlorophyll': return <Leaf className="w-4 h-4 text-emerald-400" />;
+      case 'wind_speed': return <Wind className="w-4 h-4 text-amber-400" />;
+      case 'surface_pressure': return <Gauge className="w-4 h-4 text-sky-400" />;
       default: return <Waves className="w-4 h-4" />;
     }
   };
+
+  const isSurfaceOnlyParam =
+    currentParameter.id === 'ssh' ||
+    currentParameter.id === 'wind_speed' ||
+    currentParameter.id === 'surface_pressure' ||
+    currentParameter.id === 'chlorophyll';
 
   const currentTimeStr = timesteps[currentTimeIndex] || '';
   const formattedDate = currentTimeStr ? new Date(currentTimeStr).toLocaleString('en-US', {
@@ -121,12 +132,13 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                     : 'bg-slate-800/30 border-slate-700/50 text-slate-300 hover:bg-slate-800/70 hover:border-sky-500/30'
                 }`}
               >
-                <div className="truncate pr-1">
-                  <div className="truncate font-medium text-xs">{reg.name}</div>
+                <div className="flex items-center gap-2">
+                  <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-cyan-400' : 'bg-slate-600'}`} />
+                  <span className="text-xs">{reg.name}</span>
                 </div>
                 {isBoB && (
-                  <span className="text-[8.5px] uppercase px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 font-semibold tracking-wider shrink-0">
-                    SIH Priority
+                  <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-medium">
+                    Demo Area
                   </span>
                 )}
               </button>
@@ -137,9 +149,12 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
 
       {/* 2. PARAMETER SELECTOR */}
       <section className="bg-slate-900/60 rounded-xl p-2.5 border border-sky-500/15">
-        <span className="font-semibold text-cyan-300 uppercase tracking-wider text-[10.5px] block mb-2">
-          Physical Parameter
-        </span>
+        <div className="flex items-center justify-between mb-2">
+          <span className="font-semibold text-cyan-300 uppercase tracking-wider text-[10.5px]">
+            Target Ocean Parameter
+          </span>
+          <span className="font-mono text-cyan-300 text-[10px]">{parameters.length} Active Feeds</span>
+        </div>
         <div className="grid grid-cols-1 gap-1">
           {parameters.map((param) => {
             const isSelected = currentParameter.id === param.id;
@@ -157,16 +172,37 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                   {getParamIcon(param.id)}
                   <span className="truncate text-xs">{param.name}</span>
                 </div>
-                <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-slate-950/60 text-slate-300 border border-slate-700 shrink-0">
-                  {param.unit}
-                </span>
+                <div className="flex items-center gap-1 shrink-0">
+                  {param.data_status && (
+                    <span className={`text-[8px] uppercase px-1.5 py-0.5 rounded font-semibold tracking-wider border ${
+                      param.data_status === 'LIVE' || param.data_status === 'LIVE MODEL'
+                        ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                        : param.data_status === 'LIVE SATELLITE'
+                        ? 'bg-teal-500/15 text-teal-300 border-teal-500/30'
+                        : param.data_status === 'OBSERVATIONAL PRODUCT'
+                        ? 'bg-sky-500/15 text-sky-300 border-sky-500/30'
+                        : param.data_status === 'DERIVED'
+                        ? 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30'
+                        : param.data_status === 'SIMULATED'
+                        ? 'bg-purple-500/15 text-purple-300 border-purple-500/30'
+                        : param.data_status === 'FALLBACK'
+                        ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                        : 'bg-slate-800 text-slate-400 border-slate-700'
+                    }`}>
+                      {param.data_status}
+                    </span>
+                  )}
+                  <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-slate-950/60 text-slate-300 border border-slate-700 shrink-0">
+                    {param.unit}
+                  </span>
+                </div>
               </button>
             );
           })}
         </div>
       </section>
 
-      {/* 3. DEPTH SELECTOR */}
+      {/* 3. DEPTH SELECTOR (0m to 2000m) */}
       <section className="bg-slate-900/60 rounded-xl p-2.5 border border-sky-500/15">
         <div className="flex items-center justify-between mb-1.5">
           <span className="font-semibold text-cyan-300 uppercase tracking-wider text-[10.5px]">
@@ -175,24 +211,42 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
           <span className="font-mono text-cyan-300 text-xs font-semibold">{currentDepth}m Level</span>
         </div>
         
-        {/* SSH Surface Locking Notice */}
+        {/* Surface Locking Notices */}
         {currentParameter.id === 'ssh' && (
           <div className="mb-2 p-1.5 rounded bg-sky-950/40 border border-sky-500/25 text-[9.5px] text-cyan-200 flex items-center gap-1.5">
             <Lock className="w-3 h-3 text-cyan-400 shrink-0" />
-            <span>SSH is constrained to 0m (sea surface variable).</span>
+            <span>SSH is constrained to 0m (sea surface radar altimetry).</span>
+          </div>
+        )}
+        {currentParameter.id === 'wind_speed' && (
+          <div className="mb-2 p-1.5 rounded bg-amber-950/40 border border-amber-500/25 text-[9.5px] text-amber-200 flex items-center gap-1.5">
+            <Lock className="w-3 h-3 text-amber-400 shrink-0" />
+            <span>Wind Speed is constrained to 0m (10m surface height).</span>
+          </div>
+        )}
+        {currentParameter.id === 'surface_pressure' && (
+          <div className="mb-2 p-1.5 rounded bg-sky-950/40 border border-sky-500/25 text-[9.5px] text-cyan-200 flex items-center gap-1.5">
+            <Lock className="w-3 h-3 text-cyan-400 shrink-0" />
+            <span>Atmospheric Pressure is constrained to 0m (mean sea-level).</span>
+          </div>
+        )}
+        {currentParameter.id === 'chlorophyll' && (
+          <div className="mb-2 p-1.5 rounded bg-emerald-950/40 border border-emerald-500/25 text-[9.5px] text-emerald-200 flex items-center gap-1.5">
+            <Lock className="w-3 h-3 text-emerald-400 shrink-0" />
+            <span>Chlorophyll-a is surface satellite ocean color (0m).</span>
           </div>
         )}
 
-        <div className="grid grid-cols-5 gap-1">
+        <div className="grid grid-cols-4 gap-1">
           {depths.map((d) => {
             const isSelected = currentDepth === d;
-            const isLocked = currentParameter.id === 'ssh' && d !== 0;
+            const isLocked = isSurfaceOnlyParam && d !== 0;
             return (
               <button
                 key={d}
                 onClick={() => !isLocked && onSelectDepth(d)}
                 disabled={isLocked}
-                title={isLocked ? "SSH only exists at 0m surface level" : `Set depth to ${d}m`}
+                title={isLocked ? "Surface level variable only" : `Set depth to ${d}m`}
                 className={`py-1.5 rounded text-center font-mono text-xs transition-all border ${
                   isSelected
                     ? 'bg-sky-500/30 text-cyan-200 border-sky-400 font-bold shadow-sm shadow-sky-950/40'
@@ -352,6 +406,20 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
               checked={layers.currentVectors}
               onChange={() => onToggleLayer('currentVectors')}
               className="accent-cyan-400 w-4 h-4 rounded cursor-pointer"
+            />
+          </label>
+
+          {/* Priority 5: Scientific Research AUV Survey Vehicle */}
+          <label className="flex items-center justify-between p-2 rounded-lg bg-slate-800/40 border border-slate-700/50 hover:bg-slate-800/70 cursor-pointer">
+            <span className="flex items-center gap-2">
+              <Navigation className="w-3.5 h-3.5 text-amber-400" />
+              <span>Research AUV Samudra-1</span>
+            </span>
+            <input
+              type="checkbox"
+              checked={layers.auv}
+              onChange={() => onToggleLayer('auv')}
+              className="accent-amber-400 w-4 h-4 rounded cursor-pointer"
             />
           </label>
         </div>

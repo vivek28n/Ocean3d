@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   ParameterInfo, RegionInfo, OceanGridPoint, ObservationPoint,
-  ComparisonSummary, AnomalyItem, StatisticsSummary, TimeSeriesPoint, ActiveLayers
+  ComparisonSummary, AnomalyItem, StatisticsSummary, TimeSeriesPoint, ActiveLayers,
+  ResearchVehicle
 } from './types';
 import {
   fetchParameters, fetchRegions, fetchTimesteps, fetchOceanData,
   fetchObservations, fetchComparison, fetchAnomalies, fetchStatistics,
-  fetchTimeseries
+  fetchTimeseries, fetchResearchVehicle
 } from './api';
 import { Header } from './components/Header';
 import { ControlPanel } from './components/ControlPanel';
@@ -23,7 +24,7 @@ export const App: React.FC = () => {
   const [regions, setRegions] = useState<RegionInfo[]>([]);
   const [currentRegion, setCurrentRegion] = useState<RegionInfo | null>(null);
   
-  const [depths] = useState<number[]>([0.0, 10.0, 50.0, 100.0, 500.0]);
+  const [depths] = useState<number[]>([0.0, 10.0, 50.0, 100.0, 500.0, 1000.0, 2000.0]);
   const [currentDepth, setCurrentDepth] = useState<number>(0.0);
   
   const [timesteps, setTimesteps] = useState<string[]>([]);
@@ -37,11 +38,13 @@ export const App: React.FC = () => {
     difference: true,
     anomaly: true,
     currentVectors: false,
+    auv: true,
   });
 
   // Data Stores
   const [gridData, setGridData] = useState<OceanGridPoint[]>([]);
   const [observations, setObservations] = useState<ObservationPoint[]>([]);
+  const [researchVehicle, setResearchVehicle] = useState<ResearchVehicle | null>(null);
   const [comparison, setComparison] = useState<ComparisonSummary | null>(null);
   const [anomalies, setAnomalies] = useState<AnomalyItem[]>([]);
   const [statistics, setStatistics] = useState<StatisticsSummary | null>(null);
@@ -60,15 +63,18 @@ export const App: React.FC = () => {
 
   // Pending station ID for reliable Demo Flow preset execution
   const pendingStationIdRef = useRef<string | null>(null);
+  // Persistent selected station identifier to synchronize across parameter switches
+  const selectedStationIdRef = useRef<string | null>(null);
 
   // 1. Initial configuration load
   useEffect(() => {
     async function initApp() {
       try {
-        const [paramsList, regionsList, timesList] = await Promise.all([
+        const [paramsList, regionsList, timesList, vehicleData] = await Promise.all([
           fetchParameters(),
           fetchRegions(),
-          fetchTimesteps()
+          fetchTimesteps(),
+          fetchResearchVehicle()
         ]);
         setParameters(paramsList);
         setCurrentParameter(paramsList[0] || null);
@@ -80,6 +86,7 @@ export const App: React.FC = () => {
 
         setTimesteps(timesList);
         setCurrentTimeIndex(0);
+        setResearchVehicle(vehicleData);
       } catch (err) {
         console.error('Initialization error:', err);
       }
@@ -141,23 +148,19 @@ export const App: React.FC = () => {
         const obs = obsRes.value;
         setObservations(obs);
 
-        // Bind pending demo station or validate existing station in fresh observations
-        if (pendingStationIdRef.current) {
-          const targetStation = obs.find(o => o.id === pendingStationIdRef.current);
+        // Bind pending demo station or synchronize selected station with fresh parameter observations
+        const stationId = pendingStationIdRef.current || selectedStationIdRef.current;
+        if (stationId) {
+          const targetStation = obs.find(o => o.id === stationId);
           if (targetStation) {
             setSelectedObservation(targetStation);
-            pendingStationIdRef.current = null;
           } else {
             setSelectedObservation(null);
+            selectedStationIdRef.current = null;
           }
+          pendingStationIdRef.current = null;
         } else {
-          // Region Switch State Integrity:
-          // Keep selected observation fresh if it exists in the new observations list, else null
-          setSelectedObservation(prev => {
-            if (!prev) return null;
-            const updatedObs = obs.find(o => o.id === prev.id);
-            return updatedObs || null;
-          });
+          setSelectedObservation(null);
         }
       } else {
         console.warn('Observations fetch failed:', obsRes.reason);
@@ -214,22 +217,31 @@ export const App: React.FC = () => {
   // 5. Select station from inspector or anomaly alert
   const handleSelectObservation = (obs: ObservationPoint | null) => {
     pendingStationIdRef.current = null;
+    selectedStationIdRef.current = obs ? obs.id : null;
     setSelectedObservation(obs);
   };
 
   const handleSelectRegion = (reg: RegionInfo) => {
     pendingStationIdRef.current = null;
+    selectedStationIdRef.current = null;
+    setSelectedObservation(null);
     setCurrentRegion(reg);
   };
 
   const handleSelectParameter = (param: ParameterInfo) => {
     setCurrentParameter(param);
-    if (param.id === 'ssh' && currentDepth !== 0.0) {
+    const isSurfaceOnly =
+      param.id === 'ssh' ||
+      param.id === 'wind_speed' ||
+      param.id === 'surface_pressure' ||
+      param.id === 'chlorophyll';
+    if (isSurfaceOnly && currentDepth !== 0.0) {
       setCurrentDepth(0.0);
     }
   };
 
   const handleSelectAnomalyStation = (stationId: string) => {
+    selectedStationIdRef.current = stationId;
     const target = observations.find(o => o.id === stationId);
     if (target) setSelectedObservation(target);
   };
@@ -244,6 +256,7 @@ export const App: React.FC = () => {
   const handleRunDemoPreset = () => {
     // Stage intended demo station for resolution upon fetch
     pendingStationIdRef.current = 'RAMA-BD02';
+    selectedStationIdRef.current = 'RAMA-BD02';
 
     const bob = regions.find(r => r.id === 'bay_of_bengal');
     if (bob) setCurrentRegion(bob);
@@ -260,6 +273,7 @@ export const App: React.FC = () => {
       difference: true,
       anomaly: true,
       currentVectors: true,
+      auv: true,
     });
   };
 
@@ -339,6 +353,7 @@ export const App: React.FC = () => {
               layers={layers}
               selectedObservation={selectedObservation}
               onSelectObservation={handleSelectObservation}
+              researchVehicle={researchVehicle}
             />
           </div>
         </main>
@@ -346,13 +361,18 @@ export const App: React.FC = () => {
         {/* RIGHT LOCATION INSPECTOR */}
         <LocationInspector
           selectedObservation={selectedObservation}
-          onClearSelection={() => setSelectedObservation(null)}
+          onClearSelection={() => {
+            pendingStationIdRef.current = null;
+            selectedStationIdRef.current = null;
+            setSelectedObservation(null);
+          }}
           currentParameter={currentParameter}
           currentDepth={currentDepth}
           allObservations={observations}
           onSelectStation={handleSelectObservation}
           isCollapsed={isRightPanelCollapsed}
           onToggleCollapse={() => setIsRightPanelCollapsed(prev => !prev)}
+          isLoading={isLoading}
         />
 
       </div>

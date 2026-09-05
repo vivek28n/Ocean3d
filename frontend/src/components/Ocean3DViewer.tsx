@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { OceanGridPoint, ObservationPoint, ParameterInfo, RegionInfo, ActiveLayers } from '../types';
+import { OceanGridPoint, ObservationPoint, ParameterInfo, RegionInfo, ActiveLayers, ResearchVehicle } from '../types';
 import { Rotate3D, ZoomIn, ZoomOut, Maximize2, Compass, Waves } from 'lucide-react';
 
 interface Ocean3DViewerProps {
@@ -13,6 +13,7 @@ interface Ocean3DViewerProps {
   layers: ActiveLayers;
   selectedObservation: ObservationPoint | null;
   onSelectObservation: (obs: ObservationPoint | null) => void;
+  researchVehicle?: ResearchVehicle | null;
 }
 
 // Color scale helper for parameters
@@ -34,6 +35,25 @@ function getParameterColor(paramId: string, value: number, minVal: number, maxVa
     // Coolwarm style: Deep Blue (depression) -> Cyan -> White -> Orange -> Crimson (surge)
     if (t < 0.5) return new THREE.Color().lerpColors(new THREE.Color(0x1565c0), new THREE.Color(0x80deea), t / 0.5);
     return new THREE.Color().lerpColors(new THREE.Color(0x80deea), new THREE.Color(0xe53935), (t - 0.5) / 0.5);
+  } else if (paramId === 'oxygen') {
+    // Cividis style: Dark Navy Blue -> Slate Blue -> Amber Gold -> Bright Yellow
+    if (t < 0.5) return new THREE.Color().lerpColors(new THREE.Color(0x00204d), new THREE.Color(0x414d6b), t / 0.5);
+    return new THREE.Color().lerpColors(new THREE.Color(0x414d6b), new THREE.Color(0xffea46), (t - 0.5) / 0.5);
+  } else if (paramId === 'chlorophyll') {
+    // Ocean Color Phytoplankton scale: Deep Indigo -> Sea Green -> Spring Green -> Bright Chartreuse
+    if (t < 0.5) return new THREE.Color().lerpColors(new THREE.Color(0x051b2c), new THREE.Color(0x059669), t / 0.5);
+    return new THREE.Color().lerpColors(new THREE.Color(0x059669), new THREE.Color(0x84cc16), (t - 0.5) / 0.5);
+  } else if (paramId === 'wind_speed') {
+    // Wind scale: Sky Blue (gentle breeze) -> Emerald -> Amber -> Crimson -> Magenta (gale/cyclonic)
+    if (t < 0.3) return new THREE.Color().lerpColors(new THREE.Color(0x38bdf8), new THREE.Color(0x10b981), t / 0.3);
+    if (t < 0.6) return new THREE.Color().lerpColors(new THREE.Color(0x10b981), new THREE.Color(0xf59e0b), (t - 0.3) / 0.3);
+    if (t < 0.85) return new THREE.Color().lerpColors(new THREE.Color(0xf59e0b), new THREE.Color(0xef4444), (t - 0.6) / 0.25);
+    return new THREE.Color().lerpColors(new THREE.Color(0xef4444), new THREE.Color(0xd946ef), (t - 0.85) / 0.15);
+  } else if (paramId === 'surface_pressure') {
+    // Barometric scale: Magenta/Crimson (cyclonic low) -> Cyan -> Deep Navy (high pressure anticyclone)
+    if (t < 0.35) return new THREE.Color().lerpColors(new THREE.Color(0xd946ef), new THREE.Color(0xef4444), t / 0.35);
+    if (t < 0.6) return new THREE.Color().lerpColors(new THREE.Color(0xef4444), new THREE.Color(0x00ffcc), (t - 0.35) / 0.25);
+    return new THREE.Color().lerpColors(new THREE.Color(0x00ffcc), new THREE.Color(0x0f2b5c), (t - 0.6) / 0.4);
   } else {
     // Current Velocity: Dark Purple -> Magenta -> Orange -> Bright Yellow
     if (t < 0.4) return new THREE.Color().lerpColors(new THREE.Color(0x2a0845), new THREE.Color(0x8e24aa), t / 0.4);
@@ -63,6 +83,7 @@ export const Ocean3DViewer: React.FC<Ocean3DViewerProps> = ({
   layers,
   selectedObservation,
   onSelectObservation,
+  researchVehicle
 }) => {
   const mountRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -74,6 +95,7 @@ export const Ocean3DViewer: React.FC<Ocean3DViewerProps> = ({
   const oceanSurfaceRef = useRef<THREE.Mesh | null>(null);
   const oceanPointsRef = useRef<THREE.Points | null>(null);
   const buoysGroupRef = useRef<THREE.Group | null>(null);
+  const auvGroupRef = useRef<THREE.Group | null>(null);
   const flowVectorsGroupRef = useRef<THREE.Group | null>(null);
   const landmassGroupRef = useRef<THREE.Group | null>(null);
   const gridLinesGroupRef = useRef<THREE.Group | null>(null);
@@ -148,6 +170,10 @@ export const Ocean3DViewer: React.FC<Ocean3DViewerProps> = ({
     const buoysGroup = new THREE.Group();
     scene.add(buoysGroup);
     buoysGroupRef.current = buoysGroup;
+
+    const auvGroup = new THREE.Group();
+    scene.add(auvGroup);
+    auvGroupRef.current = auvGroup;
 
     const flowGroup = new THREE.Group();
     scene.add(flowGroup);
@@ -484,6 +510,7 @@ export const Ocean3DViewer: React.FC<Ocean3DViewerProps> = ({
         let weightSum = 0;
         for (let k = 0; k < observations.length; k++) {
           const obs = observations[k];
+          if (obs.difference === null || obs.difference === undefined) continue;
           const dLat = pt.lat - obs.lat;
           const dLon = pt.lon - obs.lon;
           const distSq = dLat * dLat + dLon * dLon;
@@ -676,10 +703,15 @@ export const Ocean3DViewer: React.FC<Ocean3DViewerProps> = ({
       if (i % stride !== 0) return;
 
       const pos = projectGeoTo3D(pt.lat, pt.lon, depthY + 0.15);
-      const mag = Math.min(1.5, Math.max(0.2, pt.current_magnitude));
+      const rawMag = pt.current_magnitude ?? Math.hypot(pt.current_u || 0, pt.current_v || 0);
+      const mag = Math.min(1.5, Math.max(0.2, Number.isFinite(rawMag) && rawMag > 0 ? rawMag : 0.4));
 
       // Arrow direction vector
-      const dir = new THREE.Vector3(pt.current_u, 0, -pt.current_v).normalize();
+      const u = Number.isFinite(pt.current_u) ? pt.current_u : 0.1;
+      const v = Number.isFinite(pt.current_v) ? pt.current_v : 0.1;
+      const dir = new THREE.Vector3(u, 0, -v);
+      if (dir.lengthSq() < 1e-6) dir.set(0.1, 0, -0.1);
+      dir.normalize();
       const length = mag * 0.7;
 
       const arrow = new THREE.ArrowHelper(
@@ -706,17 +738,129 @@ export const Ocean3DViewer: React.FC<Ocean3DViewerProps> = ({
 
   }, [gridData, layers.currentVectors, currentRegion, currentDepth]);
 
-  // 6. Raycasting for Observation Click & Hover Interaction
+  // 5b. Render Scientific Research AUV Survey Vehicle
+  useEffect(() => {
+    if (!auvGroupRef.current) return;
+    const group = auvGroupRef.current;
+    while (group.children.length > 0) {
+      group.remove(group.children[0]);
+    }
+
+    if (!layers.auv || !researchVehicle) return;
+
+    const depthY = -researchVehicle.depth * 0.0035;
+    const pos = projectGeoTo3D(researchVehicle.lat, researchVehicle.lon, depthY + 0.35);
+
+    const auvContainer = new THREE.Group();
+    auvContainer.position.copy(pos);
+
+    const headingRad = THREE.MathUtils.degToRad(researchVehicle.heading);
+    auvContainer.rotation.y = -headingRad;
+
+    const currentReadingVal = researchVehicle.current_readings[currentParameter.id] ?? 11.4;
+
+    const auvObservation: ObservationPoint = {
+      id: researchVehicle.id,
+      platform_name: researchVehicle.name,
+      platform_type: researchVehicle.vehicle_type,
+      lat: researchVehicle.lat,
+      lon: researchVehicle.lon,
+      depth: researchVehicle.depth,
+      time: new Date().toISOString(),
+      temperature: researchVehicle.current_readings.temperature ?? 11.4,
+      salinity: researchVehicle.current_readings.salinity ?? 34.8,
+      ssh: 0.0,
+      current_magnitude: researchVehicle.current_readings.current_velocity ?? 0.18,
+      oxygen: researchVehicle.current_readings.oxygen ?? 24.8,
+      chlorophyll: 0.05,
+      model_value: currentReadingVal,
+      observed_value: currentReadingVal,
+      difference: 0.0,
+      z_score: 0.0,
+      anomaly_severity: 'NORMAL',
+      anomaly_reason: `Autonomous survey dive demonstration at ${researchVehicle.depth}m depth. Battery: ${researchVehicle.battery_percent}%. Speed: ${researchVehicle.speed_knots} kts.`,
+      decision_support: researchVehicle.mission,
+      data_status: 'SIMULATED',
+      source_attribution: `${researchVehicle.operator} - ${researchVehicle.scientific_disclaimer}`,
+      is_observed_available: true
+    };
+
+    auvContainer.userData = { observation: auvObservation };
+
+    // Hull: Yellow cylinder
+    const hullGeo = new THREE.CylinderGeometry(0.24, 0.24, 1.6, 16);
+    hullGeo.rotateX(Math.PI / 2);
+    const hullMat = new THREE.MeshStandardMaterial({
+      color: 0xfacc15,
+      roughness: 0.25,
+      metalness: 0.5,
+      emissive: 0xf59e0b,
+      emissiveIntensity: 0.2
+    });
+    const hullMesh = new THREE.Mesh(hullGeo, hullMat);
+    hullMesh.userData = { observation: auvObservation };
+    auvContainer.add(hullMesh);
+
+    // Nose Cone
+    const noseGeo = new THREE.SphereGeometry(0.24, 16, 16);
+    const noseMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.2, metalness: 0.8 });
+    const noseMesh = new THREE.Mesh(noseGeo, noseMat);
+    noseMesh.position.z = 0.8;
+    noseMesh.userData = { observation: auvObservation };
+    auvContainer.add(noseMesh);
+
+    // Hydrofoil Wings
+    const wingGeo = new THREE.BoxGeometry(1.8, 0.03, 0.3);
+    const wingMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3 });
+    const wingMesh = new THREE.Mesh(wingGeo, wingMat);
+    wingMesh.position.z = 0.1;
+    wingMesh.userData = { observation: auvObservation };
+    auvContainer.add(wingMesh);
+
+    // Tail Rudder
+    const rudderGeo = new THREE.BoxGeometry(0.04, 0.5, 0.35);
+    const rudderMesh = new THREE.Mesh(rudderGeo, wingMat);
+    rudderMesh.position.set(0, 0.25, -0.75);
+    rudderMesh.userData = { observation: auvObservation };
+    auvContainer.add(rudderMesh);
+
+    // Beacon Light
+    const beaconLight = new THREE.PointLight(0x38bdf8, 1.2, 4.0);
+    beaconLight.position.set(0, 0.4, 0.0);
+    auvContainer.add(beaconLight);
+
+    group.add(auvContainer);
+
+    // Survey Waypoint Track
+    if (researchVehicle.waypoints && researchVehicle.waypoints.length > 1) {
+      const trackPoints = researchVehicle.waypoints.map(wp => {
+        const wpDepthY = -wp.depth * 0.0035;
+        return projectGeoTo3D(wp.lat, wp.lon, wpDepthY + 0.35);
+      });
+      const trackGeo = new THREE.BufferGeometry().setFromPoints(trackPoints);
+      const trackMat = new THREE.LineDashedMaterial({
+        color: 0xf59e0b,
+        dashSize: 0.5,
+        gapSize: 0.25,
+        transparent: true,
+        opacity: 0.65
+      });
+      const trackLine = new THREE.Line(trackGeo, trackMat);
+      trackLine.computeLineDistances();
+      group.add(trackLine);
+    }
+  }, [layers.auv, researchVehicle, currentRegion, currentParameter]);
+
+  // 6. Raycasting for Observation & AUV Click / Hover Interaction
   const handlePointerDown = (event: React.MouseEvent<HTMLDivElement>) => {
     pointerDownPosRef.current = { x: event.clientX, y: event.clientY };
   };
 
   const handlePointerUp = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (!mountRef.current || !cameraRef.current || !buoysGroupRef.current) return;
+    if (!mountRef.current || !cameraRef.current) return;
     const dx = event.clientX - pointerDownPosRef.current.x;
     const dy = event.clientY - pointerDownPosRef.current.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
-    // Ignore drag gestures (> 5px) to prevent accidental selection during camera rotation/pan
     if (dist > 5) return;
 
     const rect = mountRef.current.getBoundingClientRect();
@@ -724,7 +868,11 @@ export const Ocean3DViewer: React.FC<Ocean3DViewerProps> = ({
     mouseRef.current.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
     raycasterRef.current.setFromCamera(mouseRef.current, cameraRef.current);
-    const intersects = raycasterRef.current.intersectObjects(buoysGroupRef.current.children, true);
+    const interactiveObjects = [
+      ...(buoysGroupRef.current?.children || []),
+      ...(auvGroupRef.current?.children || [])
+    ];
+    const intersects = raycasterRef.current.intersectObjects(interactiveObjects, true);
 
     if (intersects.length > 0) {
       let target: THREE.Object3D | null = intersects[0].object;
@@ -738,14 +886,18 @@ export const Ocean3DViewer: React.FC<Ocean3DViewerProps> = ({
   };
 
   const handlePointerMove = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (!mountRef.current || !cameraRef.current || !buoysGroupRef.current) return;
+    if (!mountRef.current || !cameraRef.current) return;
     const rect = mountRef.current.getBoundingClientRect();
 
     mouseRef.current.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     mouseRef.current.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
     raycasterRef.current.setFromCamera(mouseRef.current, cameraRef.current);
-    const intersects = raycasterRef.current.intersectObjects(buoysGroupRef.current.children, true);
+    const interactiveObjects = [
+      ...(buoysGroupRef.current?.children || []),
+      ...(auvGroupRef.current?.children || [])
+    ];
+    const intersects = raycasterRef.current.intersectObjects(interactiveObjects, true);
 
     if (intersects.length > 0) {
       let target: THREE.Object3D | null = intersects[0].object;
