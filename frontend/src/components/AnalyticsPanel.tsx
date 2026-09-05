@@ -82,6 +82,10 @@ export const AnalyticsPanel: React.FC<AnalyticsPanelProps> = ({
   }));
 
   const currentStepLabel = chartData[currentTimeIndex]?.uniqueLabel;
+  const isStatsCurrent = Boolean(
+    statistics && (!statistics.parameter || statistics.parameter === currentParameter.id)
+  );
+  const isSSH = currentParameter.id === 'ssh';
 
   return (
     <div className="w-full bg-slate-950/85 glass-panel border-t border-sky-500/20 px-3.5 py-2.5 text-slate-200 select-none">
@@ -93,10 +97,12 @@ export const AnalyticsPanel: React.FC<AnalyticsPanelProps> = ({
           <div className="bg-slate-900/80 p-2 rounded-xl border border-sky-500/20 flex flex-col justify-between">
             <span className="text-[9.5px] uppercase font-semibold tracking-wider text-slate-400 block">Mean (Mod / Obs)</span>
             <div className="font-mono font-bold text-sm text-cyan-300 mt-1 truncate">
-              {statistics ? statistics.model_mean.toFixed(2) : '--'}
+              {isStatsCurrent && statistics ? (isSSH ? statistics.model_mean.toFixed(3) : statistics.model_mean.toFixed(2)) : '--'}
               <span className="text-slate-500 font-normal text-xs mx-1">/</span>
               <span className="text-emerald-400">
-                {statistics ? statistics.observed_mean.toFixed(2) : '--'}
+                {isStatsCurrent && statistics && statistics.observed_mean !== null
+                  ? (isSSH ? statistics.observed_mean.toFixed(3) : statistics.observed_mean.toFixed(2))
+                  : '--'}
               </span>
             </div>
             <span className="text-[9px] text-slate-400 font-mono mt-0.5">{currentParameter.unit}</span>
@@ -106,7 +112,7 @@ export const AnalyticsPanel: React.FC<AnalyticsPanelProps> = ({
           <div className="bg-slate-900/80 p-2 rounded-xl border border-sky-500/20 flex flex-col justify-between">
             <span className="text-[9.5px] uppercase font-semibold tracking-wider text-slate-400 block">Minimum</span>
             <div className="font-mono font-bold text-sm text-slate-200 mt-1">
-              {statistics ? statistics.model_min.toFixed(2) : '--'}
+              {isStatsCurrent && statistics ? (isSSH ? statistics.model_min.toFixed(3) : statistics.model_min.toFixed(2)) : '--'}
             </div>
             <span className="text-[9px] text-slate-400 font-mono mt-0.5">{currentParameter.unit}</span>
           </div>
@@ -115,7 +121,7 @@ export const AnalyticsPanel: React.FC<AnalyticsPanelProps> = ({
           <div className="bg-slate-900/80 p-2 rounded-xl border border-sky-500/20 flex flex-col justify-between">
             <span className="text-[9.5px] uppercase font-semibold tracking-wider text-slate-400 block">Maximum</span>
             <div className="font-mono font-bold text-sm text-slate-200 mt-1">
-              {statistics ? statistics.model_max.toFixed(2) : '--'}
+              {isStatsCurrent && statistics ? (isSSH ? statistics.model_max.toFixed(3) : statistics.model_max.toFixed(2)) : '--'}
             </div>
             <span className="text-[9px] text-slate-400 font-mono mt-0.5">{currentParameter.unit}</span>
           </div>
@@ -126,7 +132,7 @@ export const AnalyticsPanel: React.FC<AnalyticsPanelProps> = ({
               <Target className="w-3 h-3 text-amber-400" /> RMSE
             </span>
             <div className="font-mono font-bold text-sm text-amber-300 mt-1">
-              {statistics ? statistics.rmse.toFixed(3) : '--'}
+              {isStatsCurrent && statistics && statistics.rmse !== null ? statistics.rmse.toFixed(3) : '--'}
             </div>
             <span className="text-[9px] text-slate-400 font-mono mt-0.5">Deviation Index</span>
           </div>
@@ -217,7 +223,7 @@ export const AnalyticsPanel: React.FC<AnalyticsPanelProps> = ({
                   {chartData.map((entry, index) => (
                     <Cell
                       key={`cell-${index}`}
-                      fill={entry.difference >= 0 ? '#ef4444' : '#0284c7'}
+                      fill={entry.difference !== null && entry.difference >= 0 ? '#ef4444' : '#0284c7'}
                     />
                   ))}
                 </Bar>

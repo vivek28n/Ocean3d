@@ -11,11 +11,12 @@ from typing import List, Optional, Dict, Any
 
 from backend.models import (
     ParameterInfo, RegionInfo, OceanGridPoint, ObservationPoint,
-    ComparisonSummary, AnomalyItem, StatisticsSummary
+    ComparisonSummary, AnomalyItem, StatisticsSummary, ResearchVehicleInfo
 )
 from backend.data_engine import (
     engine, PARAMETERS, REGIONS, DEPTH_LEVELS, TIMESTEPS
 )
+from backend.live_ocean_client import live_client
 
 app = FastAPI(
     title="Ocean3D API — Interactive Ocean Digital Twin",
@@ -35,14 +36,15 @@ app.add_middleware(
 
 @app.get("/api/health")
 def get_health() -> Dict[str, Any]:
-    """Health check endpoint to verify backend operational readiness."""
+    """Health check endpoint to verify backend operational readiness and live API status."""
     return {
         "status": "operational",
         "service": "Ocean3D Backend",
         "version": "1.0.0",
         "sih_problem_id": "SIH26067",
         "theme": "Disaster Management",
-        "engine": "Xarray-compatible Synthetic Ocean Engine",
+        "engine": "Operational Ocean Digital Twin Engine (Open-Meteo Marine & NOAA Altimetry Integrated)",
+        "live_api_status": live_client.last_api_status,
         "available_timesteps_count": len(TIMESTEPS),
         "available_depth_levels": DEPTH_LEVELS
     }
@@ -75,8 +77,8 @@ def get_ocean_data(
         region = "bay_of_bengal"
     if parameter not in PARAMETERS:
         parameter = "sst"
-    if parameter == "ssh":
-        depth = 0.0  # SSH is strictly a 2D surface metric
+    if parameter in ("ssh", "chlorophyll", "wind_speed", "surface_pressure"):
+        depth = 0.0  # Surface/atmospheric parameter
     elif depth not in DEPTH_LEVELS:
         depth = 0.0
     if not time or time not in TIMESTEPS:
@@ -100,8 +102,8 @@ def get_observations(
         region = "bay_of_bengal"
     if parameter not in PARAMETERS:
         parameter = "sst"
-    if parameter == "ssh":
-        depth = 0.0  # SSH is strictly a 2D surface metric
+    if parameter in ("ssh", "chlorophyll", "wind_speed", "surface_pressure"):
+        depth = 0.0  # Surface/atmospheric parameter
     elif depth not in DEPTH_LEVELS:
         depth = 0.0
     if not time or time not in TIMESTEPS:
@@ -125,8 +127,8 @@ def get_comparison(
         region = "bay_of_bengal"
     if parameter not in PARAMETERS:
         parameter = "sst"
-    if parameter == "ssh":
-        depth = 0.0  # SSH is strictly a 2D surface metric
+    if parameter in ("ssh", "chlorophyll", "wind_speed", "surface_pressure"):
+        depth = 0.0  # Surface/atmospheric parameter
     elif depth not in DEPTH_LEVELS:
         depth = 0.0
     if not time or time not in TIMESTEPS:
@@ -150,8 +152,8 @@ def get_anomalies(
         region = "bay_of_bengal"
     if parameter not in PARAMETERS:
         parameter = "sst"
-    if parameter == "ssh":
-        depth = 0.0  # SSH is strictly a 2D surface metric
+    if parameter in ("ssh", "chlorophyll", "wind_speed", "surface_pressure"):
+        depth = 0.0  # Surface/atmospheric parameter
     elif depth not in DEPTH_LEVELS:
         depth = 0.0
     if not time or time not in TIMESTEPS:
@@ -172,8 +174,8 @@ def get_statistics(
         region = "bay_of_bengal"
     if parameter not in PARAMETERS:
         parameter = "sst"
-    if parameter == "ssh":
-        depth = 0.0  # SSH is strictly a 2D surface metric
+    if parameter in ("ssh", "chlorophyll", "wind_speed", "surface_pressure"):
+        depth = 0.0  # Surface/atmospheric parameter
     elif depth not in DEPTH_LEVELS:
         depth = 0.0
     if not time or time not in TIMESTEPS:
@@ -197,7 +199,7 @@ def get_timeseries(
         region = "bay_of_bengal"
     if parameter not in PARAMETERS:
         parameter = "sst"
-    if parameter == "ssh":
+    if parameter in ("ssh", "chlorophyll", "wind_speed", "surface_pressure"):
         depth = 0.0
 
     series_data = []
@@ -245,3 +247,10 @@ def get_timeseries(
 def get_timesteps() -> List[str]:
     """Retrieve all available simulation timesteps."""
     return TIMESTEPS
+
+
+@app.get("/api/research-vehicle", response_model=ResearchVehicleInfo)
+def get_research_vehicle() -> ResearchVehicleInfo:
+    """Retrieve telemetry, mission status, and payload for the scientific survey AUV."""
+    return engine.get_research_vehicle()
+

@@ -1,6 +1,7 @@
 import {
   ParameterInfo, RegionInfo, OceanGridPoint, ObservationPoint,
-  ComparisonSummary, AnomalyItem, StatisticsSummary, TimeSeriesPoint
+  ComparisonSummary, AnomalyItem, StatisticsSummary, TimeSeriesPoint,
+  ResearchVehicle
 } from './types';
 
 const API_BASE = '/api';
@@ -144,3 +145,15 @@ export async function fetchTimesteps(): Promise<string[]> {
     ];
   }
 }
+
+export async function fetchResearchVehicle(): Promise<ResearchVehicle | null> {
+  try {
+    const res = await fetch(`${API_BASE}/research-vehicle`);
+    if (!res.ok) throw new Error('Failed to fetch research vehicle');
+    return await res.json();
+  } catch (err) {
+    console.warn('Research vehicle fetch fallback:', err);
+    return null;
+  }
+}
+
