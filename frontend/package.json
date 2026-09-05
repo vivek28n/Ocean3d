@@ -10,9 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@rolldown/binding-win32-x64-msvc": "^1.2.7",
+    
     "@types/three": "^0.185.4",
-    "lightningcss-win32-x64-msvc": "^1.33.0",
+    
     "lucide-react": "^1.39.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
