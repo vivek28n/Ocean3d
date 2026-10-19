@@ -38,7 +38,7 @@ export async function fetchRegions(): Promise<RegionInfo[]> {
     return await res.json();
   } catch {
     return [
-      { id: 'bay_of_bengal', name: 'Bay of Bengal (SIH Priority)', lat_min: 5, lat_max: 22.5, lon_min: 80, lon_max: 98, center_lat: 14.5, center_lon: 88.5, default_zoom: 4.5, description: 'Primary SIH Disaster Management focus area.' },
+      { id: 'bay_of_bengal', name: 'Bay of Bengal', lat_min: 5, lat_max: 22.5, lon_min: 80, lon_max: 98, center_lat: 14.5, center_lon: 88.5, default_zoom: 4.5, description: 'Primary Disaster Management focus area.' },
       { id: 'arabian_sea', name: 'Arabian Sea', lat_min: 8, lat_max: 26, lon_min: 55, lon_max: 77, center_lat: 17, center_lon: 66, default_zoom: 4.2, description: 'High salinity basin and upwelling zones.' },
       { id: 'indian_ocean', name: 'North Indian Ocean Basin', lat_min: -5, lat_max: 25, lon_min: 50, lon_max: 102, center_lat: 10, center_lon: 76, default_zoom: 3, description: 'Comprehensive ocean basin view.' },
       { id: 'global', name: 'Global Overview', lat_min: -40, lat_max: 45, lon_min: 30, lon_max: 125, center_lat: 5, center_lon: 80, default_zoom: 2.2, description: 'Macro digital twin perspective.' },

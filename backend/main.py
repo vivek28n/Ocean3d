@@ -20,7 +20,7 @@ from backend.live_ocean_client import live_client
 
 app = FastAPI(
     title="Ocean3D API — Interactive Ocean Digital Twin",
-    description="Smart India Hackathon 2026 (SIH26067) - Disaster Management & Ocean Digital Twin Prototype",
+    description="Interactive Ocean Digital Twin & Decision Support System",
     version="1.0.0"
 )
 
@@ -41,7 +41,6 @@ def get_health() -> Dict[str, Any]:
         "status": "operational",
         "service": "Ocean3D Backend",
         "version": "1.0.0",
-        "sih_problem_id": "SIH26067",
         "theme": "Disaster Management",
         "engine": "Operational Ocean Digital Twin Engine (Open-Meteo Marine & NOAA Altimetry Integrated)",
         "live_api_status": live_client.last_api_status,

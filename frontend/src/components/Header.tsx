@@ -94,7 +94,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center gap-2">
             <h1 className="text-sm font-bold text-white tracking-wider uppercase font-sans">Ocean3D</h1>
             <span className="text-[9.5px] uppercase font-mono px-1.5 py-0.5 rounded bg-sky-500/15 text-cyan-300 border border-sky-500/30 font-medium">
-              SIH26067
+              v1.0
             </span>
           </div>
           <div className="text-[10.5px] text-slate-400 font-normal tracking-tight hidden sm:block">
@@ -132,7 +132,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* Right Controls: Quick SIH Demo Runner */}
+      {/* Right Controls: Quick Demo Runner */}
       <div className="flex items-center gap-2">
         <button
           onClick={onRunDemoPreset}
